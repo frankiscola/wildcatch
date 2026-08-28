@@ -1,0 +1,46 @@
+name: pokecatch_app
+description: >
+  Cattura animali reali e trasformali in creature in stile retro,
+  influenzate da meteo, luogo e ora della cattura.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Backend
+  supabase_flutter: ^2.5.6
+
+  # Fotocamera / galleria
+  image_picker: ^1.1.2
+  camera: ^0.11.0+2
+
+  # Posizione, meteo, geocoding
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
+  http: ^1.2.2
+
+  # Font pixel-art in stile GBA
+  google_fonts: ^6.2.1
+
+  # Utility
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
