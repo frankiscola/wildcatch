@@ -117,9 +117,13 @@ class _PhotoFrame extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.panelCream,
-        border: Border.all(color: AppColors.dialogBorderOuter, width: 4),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: AppColors.shadowSoft, blurRadius: 10, offset: Offset(0, 5)),
+        ],
       ),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(8),
+      clipBehavior: Clip.antiAlias,
       child: bytes == null
           ? Center(
               child: Icon(
@@ -128,7 +132,10 @@ class _PhotoFrame extends StatelessWidget {
                 color: AppColors.textMuted,
               ),
             )
-          : Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity),
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity),
+            ),
     );
   }
 }

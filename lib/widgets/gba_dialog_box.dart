@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Riquadro di testo con il doppio bordo tipico dei dialoghi
-/// dei giochi GBA: bordo esterno scuro spesso, bordo interno
-/// più chiaro, sfondo crema, angoli squadrati (non arrotondati).
+/// Riquadro di testo in stile RSE: angoli arrotondati, bordo
+/// sfumato blu-notte, sfondo crema chiaro e un'ombra morbida che
+/// lo fa "galleggiare" sopra lo sfondo, invece del doppio bordo
+/// squadrato/pixel usato nei giochi più vecchi.
 class GbaDialogBox extends StatelessWidget {
   final String text;
   final EdgeInsets padding;
@@ -13,7 +14,7 @@ class GbaDialogBox extends StatelessWidget {
   const GbaDialogBox({
     super.key,
     required this.text,
-    this.padding = const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     this.fontSize = 20,
   });
 
@@ -22,13 +23,25 @@ class GbaDialogBox extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.dialogBackground,
-        border: Border.all(color: AppColors.dialogBorderOuter, width: 4),
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.sapphireBlue, AppColors.sapphireBlueDark],
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadowSoft,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(3.5),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.dialogBorderInner, width: 2),
+          color: AppColors.dialogBackground,
+          borderRadius: BorderRadius.circular(17),
         ),
         padding: padding,
         child: Text(

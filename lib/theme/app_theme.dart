@@ -2,24 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Font "titolo" in stile pixel, usato per titoli, pulsanti e badge.
-/// Font "corpo" più leggibile per i testi lunghi nei dialog box.
+/// Font "titolo": rotondo, giocoso, in stile menu di Ruby/Sapphire/
+/// Emerald — non un font pixel 8-bit, ma qualcosa di morbido e
+/// leggibile che comunque "sa di videogioco".
+/// Font "corpo": più discorsivo, usato nei dialog box e nei testi lunghi.
+///
+/// Il nome del metodo è rimasto `pixelTitle` per non dover toccare
+/// tutti i punti in cui viene già richiamato nell'app: concettualmente
+/// ora indica semplicemente "il font dei titoli/UI", non più pixel.
 class AppFonts {
   AppFonts._();
 
   static TextStyle pixelTitle({double fontSize = 16, Color? color}) =>
-      GoogleFonts.pressStart2p(
-        fontSize: fontSize,
+      GoogleFonts.baloo2(
+        fontSize: fontSize * 1.25,
         color: color ?? AppColors.dialogText,
-        height: 1.4,
+        fontWeight: FontWeight.w700,
+        height: 1.25,
+        letterSpacing: 0.1,
       );
 
   static TextStyle body({double fontSize = 16, Color? color, FontWeight? weight}) =>
-      GoogleFonts.vt323(
+      GoogleFonts.nunito(
         fontSize: fontSize,
         color: color ?? AppColors.dialogText,
-        fontWeight: weight,
-        height: 1.3,
+        fontWeight: weight ?? FontWeight.w600,
+        height: 1.35,
       );
 }
 
@@ -45,7 +53,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         titleTextStyle: AppFonts.pixelTitle(
-          fontSize: 14,
+          fontSize: 13,
           color: AppColors.textOnDark,
         ),
       ),

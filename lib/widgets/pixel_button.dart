@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Pulsante rettangolare con bordo squadrato spesso e una piccola
-/// "ombra" solida in basso a destra che simula la profondità
-/// pixel-art dei menu GBA. Cambia leggermente posizione al tocco
-/// per dare la sensazione di essere premuto.
+/// Pulsante arrotondato con un leggero gradiente e un'ombra soffice,
+/// in stile menu RSE (non più il rettangolo squadrato con l'ombra
+/// solida "a gradino" della prima versione pixel). Al tocco si
+/// schiaccia leggermente e l'ombra si riduce, per dare comunque un
+/// feedback fisico giocoso.
+///
+/// Il nome della classe è rimasto `PixelButton` per non dover
+/// toccare tutti i punti dell'app che lo usano già.
 class PixelButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -29,6 +33,11 @@ class PixelButton extends StatefulWidget {
 class _PixelButtonState extends State<PixelButton> {
   bool _pressed = false;
 
+  Color _darken(Color color, [double amount = 0.18]) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
     final disabled = widget.onPressed == null;
@@ -40,45 +49,37 @@ class _PixelButtonState extends State<PixelButton> {
       onTapCancel: disabled ? null : () => setState(() => _pressed = false),
       onTap: widget.onPressed,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        transform: Matrix4.translationValues(
-          _pressed ? 2 : 0,
-          _pressed ? 2 : 0,
-          0,
-        ),
-        child: Stack(
-          children: [
-            // Ombra solida squadrata
-            Positioned(
-              left: 4,
-              top: 4,
-              right: 0,
-              bottom: 0,
-              child: Container(color: AppColors.panelBrown),
-            ),
-            // Corpo del pulsante
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: bg,
-                border: Border.all(color: AppColors.dialogBorderOuter, width: 3),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, color: widget.foreground, size: 18),
-                    const SizedBox(width: 10),
-                  ],
-                  Text(
-                    widget.label,
-                    style: AppFonts.pixelTitle(
-                      fontSize: 12,
-                      color: widget.foreground,
-                    ),
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _pressed ? 2 : 0, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [bg, _darken(bg)],
+          ),
+          boxShadow: _pressed
+              ? []
+              : [
+                  BoxShadow(
+                    color: _darken(bg, 0.3).withOpacity(0.55),
+                    blurRadius: 0,
+                    offset: const Offset(0, 4),
                   ),
                 ],
-              ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.icon != null) ...[
+              Icon(widget.icon, color: widget.foreground, size: 20),
+              const SizedBox(width: 10),
+            ],
+            Text(
+              widget.label,
+              style: AppFonts.pixelTitle(fontSize: 12, color: widget.foreground),
             ),
           ],
         ),

@@ -52,14 +52,15 @@ class _TitleLockup extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           decoration: BoxDecoration(
             color: AppColors.panelCream,
-            border: Border.all(color: AppColors.dialogBorderOuter, width: 4),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
                 color: AppColors.shadowSoft,
-                offset: Offset(6, 6),
+                blurRadius: 14,
+                offset: Offset(0, 8),
               ),
             ],
           ),

@@ -74,9 +74,12 @@ class _CreatureCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.panelCream,
-          border: Border.all(color: AppColors.dialogBorderOuter, width: 3),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          ],
         ),
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         child: Column(
           children: [
             Expanded(

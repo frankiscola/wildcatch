@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Pillola colorata con il nome del tipo, come quelle mostrate
-/// nella schermata riassuntiva del Pokemon nei giochi gen 3.
+/// Pillola colorata e arrotondata con il nome del tipo, come quelle
+/// mostrate nella schermata riassuntiva del Pokemon nei giochi RSE
+/// (non più un badge squadrato con bordo pixel).
 class TypeBadge extends StatelessWidget {
   final String type;
 
@@ -13,14 +14,21 @@ class TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = TypeColors.of(type);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: AppColors.dialogBorderOuter, width: 2),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.4),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         type.toUpperCase(),
-        style: AppFonts.pixelTitle(fontSize: 9, color: Colors.white),
+        style: AppFonts.pixelTitle(fontSize: 8, color: Colors.white),
       ),
     );
   }
