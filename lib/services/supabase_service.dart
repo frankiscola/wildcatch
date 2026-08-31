@@ -10,14 +10,15 @@ class SupabaseService {
   static SupabaseClient get client => Supabase.instance.client;
 
   /// Da chiamare una sola volta in main() prima di runApp().
-  /// TODO: sostituire con le tue vere credenziali del progetto
-  /// Supabase (Settings -> API nel dashboard). Non committare
-  /// la chiave anon in chiaro in repository pubblici: usa
-  /// --dart-define o un file .env escluso da git.
+  /// Credenziali del progetto Supabase "wildcatch" (ref
+  /// ffwfyhdorffzzbyvtlpv). Attenzione: la anon key è pubblica per
+  /// design (protetta dalle policy RLS, non da segretezza), ma se
+  /// pubblichi questo repo evita comunque di versionare chiavi in
+  /// chiaro per abitudine — meglio --dart-define o un file .env.
   static Future<void> initialize() async {
     await Supabase.initialize(
-      url: 'https://YOUR_PROJECT_REF.supabase.co',
-      anonKey: 'YOUR_SUPABASE_ANON_KEY',
+      url: 'https://ffwfyhdorffzzbyvtlpv.supabase.co',
+      publishableKey: 'sb_publishable_8xtIRX2Yrf3AVlim0uEBuw_MveR7WhT',
     );
   }
 
@@ -27,8 +28,7 @@ class SupabaseService {
     required String userId,
     required Uint8List photoBytes,
   }) async {
-    final fileName =
-        '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
     await client.storage.from('captures').uploadBinary(
           fileName,

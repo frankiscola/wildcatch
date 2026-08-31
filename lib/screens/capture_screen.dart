@@ -37,10 +37,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final bytes = _previewBytes;
     if (bytes == null) return;
 
-    // TODO: in produzione recuperare l'id utente reale da un flusso
-    // di autenticazione Supabase (anche anonima va bene per iniziare).
-    final userId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'anonymous-user';
+    // Ora garantito da main.dart, che fa sign-in anonimo all'avvio
+    // se non c'è già una sessione: qui l'utente esiste sempre.
+    final userId = Supabase.instance.client.auth.currentUser!.id;
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const GeneratingScreen()),

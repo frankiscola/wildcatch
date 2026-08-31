@@ -66,78 +66,98 @@ mosse, piano evolutivo, contesto di cattura ED evoluzione),
   usa la stessa logica della formula classica (rapporto HP
   correnti/massimi del selvatico).
 
-## Cosa manca (lato tuo)
+## Backend Supabase (già pronto in `supabase/`)
 
-1. **Progetto Supabase**: credenziali in `lib/services/supabase_service.dart`.
+```
+supabase/
+  migrations/0001_init.sql          # tabelle, RLS, bucket storage
+  functions/
+    _shared/                        # porting TS dei motori Dart
+      typing_engine.ts
+      stats_engine.ts
+      movepool.ts
+      evolution.ts
+      cors.ts
+    generate-creature/index.ts      # orchestratore della cattura
+```
 
-2. **Bucket storage** `captures` (public per l'MVP).
+`generate-creature` fa esattamente quello che faceva la simulazione
+locale: calcola tipo, statistiche, mosse iniziali e piano evolutivo,
+salva la riga in `captures` rispettando le policy RLS (l'utente può
+scrivere solo le proprie righe) e restituisce il JSON che
+`Creature.fromJson` si aspetta già lato Flutter — non serve toccare
+altro codice Dart.
 
-3. **Schema tabelle** — versione aggiornata con tutti i nuovi campi:
+### Deploy
 
-   ```sql
-   create table captures (
-     id uuid primary key default gen_random_uuid(),
-     user_id uuid references auth.users not null,
-     nickname text default '???',
-     original_photo_url text not null,
-     front_sprite_url text,
-     back_sprite_url text,
-     assigned_type text[] not null,
-     species_hint text,
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
 
-     level int not null default 5,
-     current_exp int not null default 0,
-     current_hp int not null,
+supabase db push                          # crea tabelle, RLS, bucket
+supabase functions deploy generate-creature
+```
 
-     base_stats jsonb not null,       -- {hp, attack, defense, sp_attack, sp_defense, speed}
-     moves jsonb not null,            -- array di {move: {...}, current_pp}
-     evolution_plan jsonb not null,   -- {total_stages, current_stage, next_evolution_level, second_evolution_level}
+Poi in `lib/services/supabase_service.dart` sostituisci
+`YOUR_PROJECT_REF` e `YOUR_SUPABASE_ANON_KEY` con i valori reali
+(dashboard → Settings → API).
 
-     captured_at timestamptz not null,
-     latitude double precision not null,
-     longitude double precision not null,
-     elevation_m double precision,
-     weather_condition text not null,
-     temperature_c double precision not null,
-     humidity_percent double precision,
-     wind_speed_kmh double precision,
+### Sign-in anonimo (necessario)
 
-     -- valorizzate solo dopo la prima evoluzione
-     evolution_context jsonb
-   );
+`generate-creature` richiede un utente autenticato (le policy RLS si
+basano su `auth.uid()`). `main.dart` fa già il sign-in anonimo in
+automatico all'avvio — l'unica cosa da fare è abilitarlo nella
+dashboard: **Authentication → Providers → Anonymous Sign-Ins**.
 
-   create table battle_logs (
-     id uuid primary key default gen_random_uuid(),
-     user_id uuid references auth.users not null,
-     creature_id uuid references captures not null,
-     wild_snapshot jsonb not null,
-     outcome text not null,           -- 'caught' | 'fled' | 'fainted_own'
-     created_at timestamptz not null default now()
-   );
-   ```
+### Verifica rapida da terminale
 
-4. **Edge function `generate-creature`** (cattura): calcola il primo
-   (e unico, alla cattura) tipo con `typing_engine.dart`, genera le
-   statistiche base con `stats_engine.dart`, le 4 mosse iniziali con
-   `movepool.dart`, il piano evolutivo con `evolution_engine.dart`,
-   chiama il servizio di generazione immagini per fronte/retro, salva
-   la riga e restituisce il JSON atteso da `Creature.fromJson`.
+```bash
+supabase functions invoke generate-creature --data '{
+  "original_photo_url": "https://example.com/test.jpg",
+  "context": {
+    "captured_at": "2026-08-30T14:00:00.000Z",
+    "latitude": 41.9,
+    "longitude": 12.5,
+    "elevation_meters": 20,
+    "biome": "cittaUrbana",
+    "weather_condition": "clear",
+    "temperature_celsius": 32,
+    "humidity_percent": 40,
+    "wind_speed_kmh": 5,
+    "is_night_time": false,
+    "season": "estate"
+  }
+}'
+```
 
-5. **Edge function `evolve-creature`** (nuova): riceve l'id della
-   creatura + il contesto attuale (meteo/GPS/ora del momento
-   dell'evoluzione), verifica che il livello abbia raggiunto la
-   soglia, chiama `EvolutionEngine.determineSecondType` con ENTRAMBI
-   i contesti, rigenera le sprite fronte/retro con il nuovo aspetto,
-   propone eventualmente una mossa più forte da imparare, e aggiorna
-   la riga.
+Con questi valori (estate, 32°C, città) dovresti vedere una creatura
+con buone probabilità di tipo fuoco/terra/acciaio/normale — un buon
+modo per confermare che il motore di tipizzazione è stato portato
+correttamente in TypeScript.
 
-6. **Edge function `resolve-wild-encounter`** (nuova, opzionale se si
-   preferisce tenere la battaglia lato client): genera una
-   `WildEncounter` a partire da una foto, con livello/tipo/statistiche
-   coerenti col contesto attuale, da passare a `BattleScreen`.
+## Cosa manca ancora
 
-7. **Permessi piattaforma**: invariati rispetto alla prima versione
-   (fotocamera, posizione, storage).
+1. **Generazione immagini reale**: oggi `front_sprite_url` e
+   `back_sprite_url` sono placeholder (= la foto originale). Il punto
+   esatto dove agganciare il servizio AI è commentato con TODO in
+   `supabase/functions/generate-creature/index.ts`.
+
+2. **Edge function `evolve-creature`** (non ancora scritta): stesso
+   pattern di `generate-creature`, ma userà anche
+   `determineSecondType` (da portare da `evolution_engine.dart`) e
+   riceverà il contesto ATTUALE oltre all'id della creatura.
+
+3. **Edge function `resolve-wild-encounter`** (non ancora scritta,
+   opzionale se si preferisce generare l'incontro lato client): serve
+   per collegare `BattleScreen` al resto del flusso.
+
+4. **Permessi piattaforma**:
+   - Android (`android/app/src/main/AndroidManifest.xml`): `CAMERA`,
+     `ACCESS_FINE_LOCATION`, `INTERNET`.
+   - iOS (`ios/Runner/Info.plist`): `NSCameraUsageDescription`,
+     `NSLocationWhenInUseUsageDescription`,
+     `NSPhotoLibraryUsageDescription`.
 
 ## Avvio
 
@@ -148,12 +168,13 @@ flutter run
 
 ## Prossimi passi suggeriti
 
+- Pipeline di generazione immagini AI (sostituisce i placeholder).
+- Collegare foto → `WildEncounter` → `BattleScreen` nel flusso di navigazione.
 - Sistema di esperienza/level-up dopo ogni battaglia vinta (oggi il
   livello sale solo "concettualmente": va aggiunta la logica che
-  assegna EXP e richiama `EvolutionEngine.shouldEvolveNow` dopo ogni
-  incremento di livello).
+  assegna EXP e richiama `EvolutionEngine.shouldEvolveNow`).
 - UI per scegliere quale mossa dimenticare quando se ne impara una
   nuova (oggi `MovePool.nextMoveToLearn` è pronto lato logica).
-- Efficacia di tipo (super efficace / poco efficace) nel
-  `battle_engine.dart`, oggi il danno non la considera.
-- Autenticazione reale al posto del placeholder `anonymous-user`.
+- Efficacia di tipo (super efficace / poco efficace) nel `battle_engine.dart`.
+- Autenticazione "vera" (email/social) in aggiunta a quella anonima,
+  per recuperare i propri Pokemon su un nuovo dispositivo.
