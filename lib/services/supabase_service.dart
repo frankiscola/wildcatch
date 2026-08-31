@@ -18,7 +18,7 @@ class SupabaseService {
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: 'https://ffwfyhdorffzzbyvtlpv.supabase.co',
-      publishableKey: 'sb_publishable_8xtIRX2Yrf3AVlim0uEBuw_MveR7WhT',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmd2Z5aGRvcmZmenpieXZ0bHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwOTc0MjYsImV4cCI6MjEwMzY3MzQyNn0.aK-34x9Vpe6uOJOLCE2mQkShhD9PLqsMiTWNHmGfu6Q',
     );
   }
 
@@ -28,7 +28,8 @@ class SupabaseService {
     required String userId,
     required Uint8List photoBytes,
   }) async {
-    final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileName =
+        '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
     await client.storage.from('captures').uploadBinary(
           fileName,
@@ -80,6 +81,24 @@ class SupabaseService {
     return (rows as List)
         .map((row) => Creature.fromJson(row as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Aggiorna il nickname di una creatura già salvata. Usato subito
+  /// dopo la cattura per sostituire il placeholder '???' con il nome
+  /// generato client-side (NameGenerator), combinando la specie
+  /// rilevata su device col tipo appena assegnato dal server.
+  Future<Creature> renameCreature({
+    required String id,
+    required String nickname,
+  }) async {
+    final row = await client
+        .from('captures')
+        .update({'nickname': nickname})
+        .eq('id', id)
+        .select()
+        .single();
+
+    return Creature.fromJson(row);
   }
 }
 

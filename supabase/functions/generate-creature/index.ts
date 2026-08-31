@@ -5,11 +5,10 @@
 // /piano evolutivo, salva la riga in 'captures' e restituisce il
 // JSON che Creature.fromJson si aspetta.
 //
-// NOTA sulle sprite: in questa versione front_sprite_url e
-// back_sprite_url sono ancora placeholder (= la foto originale).
-// La chiamata al servizio di generazione immagini AI è il prossimo
-// pezzo da costruire — qui c'è già il punto esatto (TODO più sotto)
-// dove andrà agganciata.
+// NOTA sulle sprite: front_sprite_url e back_sprite_url restano
+// ancora placeholder (= la foto originale). La generazione vera
+// avviene fuori da qui, via Ludo.ai (Generate from References),
+// usando species_hint come parte del prompt testuale.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -17,10 +16,11 @@ import { assignTypes, type CaptureContextJson } from "../_shared/typing_engine.t
 import { generateBaseStats } from "../_shared/stats_engine.ts";
 import { starterMoves } from "../_shared/movepool.ts";
 import { createInitialEvolutionPlan } from "../_shared/evolution.ts";
+import { classifySpecies } from "../_shared/species_classifier.ts";
 
 interface RequestBody {
   original_photo_url: string;
-  context: CaptureContextJson & { species_hint?: string };
+  context: CaptureContextJson;
 }
 
 Deno.serve(async (req: Request) => {
@@ -60,6 +60,10 @@ Deno.serve(async (req: Request) => {
     }
     const userId = userData.user.id;
 
+    // 0. Che animale è, dalla foto (usato come nickname/species_hint
+    //    e come base del prompt che passerai a Ludo.ai).
+    const speciesHint = await classifySpecies(original_photo_url);
+
     // 1. Tipo: alla cattura la creatura ha SEMPRE un solo tipo,
     //    anche se assignTypes può restituirne 2 (quel caso è per
     //    l'evoluzione, non per la cattura).
@@ -82,22 +86,20 @@ Deno.serve(async (req: Request) => {
     const level = 5;
     const maxHp = Math.floor((2 * baseStats.hp * level) / 100) + level + 10;
 
-    // 6. Sprite — PLACEHOLDER, vedi nota in testa al file.
-    // TODO: sostituire con la chiamata al servizio di image-gen,
-    // passandogli original_photo_url + types come indicazione di
-    // stile/palette, e ottenendo due URL (fronte/retro) da salvare
-    // qui sotto al posto di original_photo_url.
+    // 6. Sprite — PLACEHOLDER. La generazione vera avviene fuori da
+    // qui via Ludo.ai, usando original_photo_url come reference e
+    // species_hint come parte del prompt testuale ("un gatto...").
     const frontSpriteUrl = original_photo_url;
     const backSpriteUrl = original_photo_url;
 
     const row = {
       user_id: userId,
-      nickname: context.species_hint ?? "???",
+      nickname: speciesHint,
       original_photo_url,
       front_sprite_url: frontSpriteUrl,
       back_sprite_url: backSpriteUrl,
       assigned_type: types,
-      species_hint: context.species_hint ?? null,
+      species_hint: speciesHint,
       level,
       current_exp: 0,
       current_hp: maxHp,

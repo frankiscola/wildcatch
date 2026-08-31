@@ -5,6 +5,7 @@ import '../models/creature.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../services/supabase_service.dart';
+import '../services/name_generator.dart';
 
 /// Le fasi del flusso di cattura, in ordine.
 enum CaptureStep {
@@ -12,6 +13,7 @@ enum CaptureStep {
   requestingContext, // GPS + meteo + elevazione
   uploadingPhoto,
   generatingCreature, // chiamata alla edge function
+  naming, // composizione del nome (specie + tipo) e salvataggio
   done,
   error,
 }
@@ -44,21 +46,30 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
   final LocationService _locationService;
   final WeatherService _weatherService;
   final SupabaseService _supabaseService;
+  final NameGenerator _nameGenerator;
 
   CaptureFlowNotifier({
     LocationService? locationService,
     WeatherService? weatherService,
     SupabaseService? supabaseService,
+    NameGenerator? nameGenerator,
   })  : _locationService = locationService ?? LocationService(),
         _weatherService = weatherService ?? WeatherService(),
         _supabaseService = supabaseService ?? SupabaseService(),
+        _nameGenerator = nameGenerator ?? NameGenerator(),
         super(const CaptureFlowState());
 
-  /// Orchestratore principale: dalla foto appena scattata
-  /// fino alla creatura generata.
+  /// Orchestratore principale: dalla foto appena scattata fino alla
+  /// creatura generata E rinominata.
+  ///
+  /// [detectedSpecies] arriva dal rilevamento on-device (ML Kit) già
+  /// fatto in CaptureScreen sulla foto appena scattata — qui non si
+  /// rifà alcuna analisi immagine, si usa solo per comporre il nome
+  /// insieme al tipo che il server sta per assegnare.
   Future<void> startCapture({
     required Uint8List photoBytes,
     required String userId,
+    String? detectedSpecies,
   }) async {
     try {
       state = state.copyWith(step: CaptureStep.requestingContext);
@@ -76,7 +87,14 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
         context: context,
       );
 
-      state = state.copyWith(step: CaptureStep.done, result: creature);
+      state = state.copyWith(step: CaptureStep.naming);
+      final name = _nameGenerator.generate(detectedSpecies, creature.types);
+      final renamed = await _supabaseService.renameCreature(
+        id: creature.id,
+        nickname: name,
+      );
+
+      state = state.copyWith(step: CaptureStep.done, result: renamed);
     } catch (e) {
       state = state.copyWith(
         step: CaptureStep.error,

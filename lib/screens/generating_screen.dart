@@ -24,6 +24,8 @@ class GeneratingScreen extends ConsumerWidget {
         return 'Invio la foto al Pokedex...';
       case CaptureStep.generatingCreature:
         return 'La pokeball trema... sta per uscire qualcosa!';
+      case CaptureStep.naming:
+        return 'Le sto dando un nome...';
       case CaptureStep.error:
         return 'Qualcosa è andato storto durante la cattura.';
       case CaptureStep.done:

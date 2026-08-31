@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../providers/capture_flow_provider.dart';
+import '../services/species_detector.dart';
 import 'generating_screen.dart';
 
 class CaptureScreen extends ConsumerStatefulWidget {
@@ -20,7 +22,15 @@ class CaptureScreen extends ConsumerStatefulWidget {
 
 class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   Uint8List? _previewBytes;
+  XFile? _pickedFile;
   final _picker = ImagePicker();
+  final _speciesDetector = SpeciesDetector();
+
+  @override
+  void dispose() {
+    _speciesDetector.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickPhoto(ImageSource source) async {
     final file = await _picker.pickImage(
@@ -30,24 +40,40 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     );
     if (file == null) return;
     final bytes = await file.readAsBytes();
-    setState(() => _previewBytes = bytes);
+    setState(() {
+      _previewBytes = bytes;
+      _pickedFile = file;
+    });
   }
 
   Future<void> _confirmAndGenerate() async {
     final bytes = _previewBytes;
+    final pickedFile = _pickedFile;
     if (bytes == null) return;
 
     // Ora garantito da main.dart, che fa sign-in anonimo all'avvio
     // se non c'è già una sessione: qui l'utente esiste sempre.
     final userId = Supabase.instance.client.auth.currentUser!.id;
 
+    // Rilevamento specie on-device (ML Kit, gratuito): meglio farlo
+    // qui, sulla foto ancora locale, piuttosto che nell'edge
+    // function — niente giri di rete in più, niente costi.
+    String? detectedSpecies;
+    if (pickedFile != null) {
+      detectedSpecies = await _speciesDetector.detectFromFile(File(pickedFile.path));
+    }
+
+    if (!mounted) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const GeneratingScreen()),
     );
 
-    await ref
-        .read(captureFlowProvider.notifier)
-        .startCapture(photoBytes: bytes, userId: userId);
+    await ref.read(captureFlowProvider.notifier).startCapture(
+          photoBytes: bytes,
+          userId: userId,
+          detectedSpecies: detectedSpecies,
+        );
   }
 
   @override

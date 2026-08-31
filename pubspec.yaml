@@ -1,4 +1,4 @@
-name: pokecatch_app
+name: wildcatch
 description: >
   Cattura animali reali e trasformali in creature in stile retro,
   influenzate da meteo, luogo e ora della cattura.
@@ -26,6 +26,9 @@ dependencies:
   geolocator: ^13.0.1
   geocoding: ^3.0.0
   http: ^1.2.2
+
+  # Riconoscimento specie on-device: gratuito, offline, nessuna API key
+  google_mlkit_image_labeling: ^0.13.0
 
   # Font pixel-art in stile GBA
   google_fonts: ^6.2.1
