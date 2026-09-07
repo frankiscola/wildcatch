@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pokeball_spinner.dart';
@@ -39,7 +38,7 @@ class GeneratingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(captureFlowProvider);
 
-    ref.listen(captureFlowProvider, (previous, next) {
+    ref.listen<CaptureFlowState>(captureFlowProvider, (previous, next) {
       if (next.step == CaptureStep.done && next.result != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(

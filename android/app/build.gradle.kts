@@ -6,7 +6,13 @@ plugins {
 
 android {
     namespace = "com.quince.wildcatch"
-    compileSdk = flutter.compileSdkVersion
+    // Forzato a 36 invece di flutter.compileSdkVersion: la tua
+    // installazione Flutter riporta 33 di default, troppo vecchio
+    // per le dipendenze di geocoding_android (androidx.fragment,
+    // androidx.window, androidx.core, ecc. richiedono >= 34).
+    // Se in futuro aggiorni Flutter e questo torna a essere
+    // ridondante, puoi ripristinare flutter.compileSdkVersion.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -20,7 +26,9 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Stesso discorso di compileSdk: forzato a un valore >= 34
+        // per coerenza con le dipendenze installate.
+        targetSdk = 36
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`

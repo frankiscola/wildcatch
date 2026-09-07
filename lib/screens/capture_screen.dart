@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
@@ -60,7 +59,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     // function — niente giri di rete in più, niente costi.
     String? detectedSpecies;
     if (pickedFile != null) {
-      detectedSpecies = await _speciesDetector.detectFromFile(File(pickedFile.path));
+      detectedSpecies =
+          await _speciesDetector.detectFromFile(File(pickedFile.path));
     }
 
     if (!mounted) return;
@@ -144,7 +144,10 @@ class _PhotoFrame extends StatelessWidget {
         color: AppColors.panelCream,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 10, offset: Offset(0, 5)),
+          BoxShadow(
+              color: AppColors.shadowSoft,
+              blurRadius: 10,
+              offset: Offset(0, 5)),
         ],
       ),
       padding: const EdgeInsets.all(8),
@@ -159,7 +162,8 @@ class _PhotoFrame extends StatelessWidget {
             )
           : ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity),
+              child: Image.memory(bytes!,
+                  fit: BoxFit.cover, width: double.infinity),
             ),
     );
   }
