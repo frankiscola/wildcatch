@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/capture_context.dart';
 import '../models/creature.dart';
+import '../models/sighting.dart';
 
 /// Punto unico di accesso a Supabase: inizializzazione, upload
 /// della foto originale e invocazione della edge function che
@@ -40,11 +41,13 @@ class SupabaseService {
     return client.storage.from('captures').getPublicUrl(fileName);
   }
 
-  /// Invoca la edge function 'generate-creature', che si occupa di:
-  /// 1. determinare il tipo tramite il motore di regole lato server
-  /// 2. chiamare il servizio di generazione immagini per fronte/retro
-  /// 3. salvare il record nella tabella 'captures'
-  /// 4. restituire la creatura completa
+  /// Invoca la edge function 'generate-creature', percorso "diretto"
+  /// (nessun doppio avvistamento). Da qui in poi la UI normale NON la
+  /// usa più: il flusso di cattura passa da recordSighting +
+  /// confirmSighting (meccanismo 5). La teniamo comunque disponibile
+  /// per test manuali da terminale (vedi README) e come riferimento
+  /// per la logica condivisa che ora vive lato server in
+  /// supabase/functions/_shared/finalize_capture.ts.
   Future<Creature> generateCreature({
     required String originalPhotoUrl,
     required CaptureContext context,
@@ -60,6 +63,76 @@ class SupabaseService {
     if (response.status != 200) {
       throw SupabaseServiceException(
         'Generazione fallita (status ${response.status}).',
+      );
+    }
+
+    return Creature.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Meccanismo 5 (doppio avvistamento), primo passo: registra il
+  /// primo scatto come "avvistamento" in attesa di conferma, SENZA
+  /// ancora generare una creatura. Il server calcola l'hash percettivo
+  /// della foto e controlla se combacia in modo sospetto con foto già
+  /// viste da altri utenti (vedi resolve-sighting/index.ts).
+  Future<SightingRecorded> recordSighting({
+    required String originalPhotoUrl,
+    required CaptureContext context,
+    String? speciesHint,
+  }) async {
+    final response = await client.functions.invoke(
+      'resolve-sighting',
+      body: {
+        'action': 'record',
+        'original_photo_url': originalPhotoUrl,
+        'context': context.toJson(),
+        'species_hint': speciesHint,
+      },
+    );
+
+    if (response.status != 200) {
+      throw SupabaseServiceException(
+        'Impossibile registrare l\'avvistamento (status ${response.status}).',
+      );
+    }
+
+    return SightingRecorded.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Meccanismo 5, secondo passo: conferma l'avvistamento precedente
+  /// con una seconda foto. Se il server ritiene plausibile che si
+  /// tratti dello stesso animale reale rivisto poco dopo (vicinanza
+  /// GPS, tempo trascorso, somiglianza-ma-non-identità dell'immagine),
+  /// finalizza la cattura e restituisce la creatura completa.
+  ///
+  /// Lancia [SightingRejectedException] se il server rifiuta la
+  /// conferma, con un motivo già pronto per essere mostrato
+  /// all'utente (vedi SightingRejectionReason.userMessage).
+  Future<Creature> confirmSighting({
+    required String sightingId,
+    required String originalPhotoUrl,
+    required CaptureContext context,
+    String? speciesHint,
+  }) async {
+    final response = await client.functions.invoke(
+      'resolve-sighting',
+      body: {
+        'action': 'confirm',
+        'sighting_id': sightingId,
+        'original_photo_url': originalPhotoUrl,
+        'context': context.toJson(),
+        'species_hint': speciesHint,
+      },
+    );
+
+    if (response.status == 409) {
+      final data = response.data as Map<String, dynamic>?;
+      final reason = SightingRejectionReason.fromCode(data?['reason'] as String?);
+      throw SightingRejectedException(reason);
+    }
+
+    if (response.status != 200) {
+      throw SupabaseServiceException(
+        'Conferma avvistamento fallita (status ${response.status}).',
       );
     }
 

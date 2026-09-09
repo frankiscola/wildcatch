@@ -6,33 +6,59 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/pokeball_spinner.dart';
 import '../widgets/pixel_button.dart';
 import '../providers/capture_flow_provider.dart';
+import 'capture_screen.dart';
 import 'result_screen.dart';
 
-/// Schermata mostrata durante tutta la pipeline: raccolta contesto,
-/// upload della foto, generazione della creatura. Il testo del
-/// dialog box cambia in base allo step corrente, imitando la
-/// sequenza di cattura dei giochi originali.
+/// Schermata mostrata durante ogni singolo scatto (sia il primo
+/// avvistamento sia la conferma): raccolta contesto, analisi di
+/// liveness, upload, chiamata server. Il testo del dialog box cambia
+/// in base allo step corrente, imitando la sequenza di cattura dei
+/// giochi originali.
+///
+/// [isConfirmation] indica se questo scatto è il primo avvistamento
+/// o la conferma, solo per scegliere i messaggi e la navigazione
+/// giusta al termine.
 class GeneratingScreen extends ConsumerWidget {
-  const GeneratingScreen({super.key});
+  final bool isConfirmation;
+
+  const GeneratingScreen({super.key, this.isConfirmation = false});
 
   String _messageFor(CaptureStep step) {
     switch (step) {
-      case CaptureStep.requestingContext:
-        return 'Rilevo posizione, meteo e ora della cattura...';
-      case CaptureStep.uploadingPhoto:
-        return 'Invio la foto al Pokedex...';
-      case CaptureStep.generatingCreature:
-        return 'La pokeball trema... sta per uscire qualcosa!';
-      case CaptureStep.naming:
-        return 'Le sto dando un nome...';
-      case CaptureStep.error:
-        return 'Qualcosa è andato storto durante la cattura.';
-      case CaptureStep.done:
-        return 'Cattura riuscita!';
       case CaptureStep.idle:
         return 'Preparo la cattura...';
+      case CaptureStep.requestingContext:
+        return 'Rilevo posizione, meteo e ora...';
+      case CaptureStep.capturingBurst:
+        return 'Tieni fermo il telefono un istante...';
+      case CaptureStep.uploadingPhoto:
+        return 'Invio la foto al Pokedex...';
+      case CaptureStep.recordingSighting:
+        return 'Registro l\'avvistamento...';
+      case CaptureStep.awaitingConfirmation:
+        return 'Avvistamento registrato! Ora conferma.';
+      case CaptureStep.confirmingSighting:
+        return 'Verifico che sia lo stesso animale...';
+      case CaptureStep.naming:
+        return 'Le sto dando un nome...';
+      case CaptureStep.done:
+        return 'Cattura riuscita!';
+      case CaptureStep.sightingExpired:
+        return 'Il tempo per confermare è scaduto.';
+      case CaptureStep.rejected:
+        return 'Non sono riuscito a confermare l\'avvistamento.';
+      case CaptureStep.error:
+        return 'Qualcosa è andato storto durante la cattura.';
     }
   }
+
+  bool _isTerminal(CaptureStep step) => switch (step) {
+        CaptureStep.error ||
+        CaptureStep.rejected ||
+        CaptureStep.sightingExpired =>
+          true,
+        _ => false,
+      };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,11 +66,28 @@ class GeneratingScreen extends ConsumerWidget {
 
     ref.listen<CaptureFlowState>(captureFlowProvider, (previous, next) {
       if (next.step == CaptureStep.done && next.result != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => ResultScreen(creature: next.result!),
-          ),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => ResultScreen(creature: next.result!)),
+          (route) => route.isFirst,
         );
+        return;
+      }
+
+      // Primo scatto riuscito: si passa alla schermata di conferma,
+      // sostituendo questa (non si torna indietro a "Cattura").
+      if (!isConfirmation && next.step == CaptureStep.awaitingConfirmation) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const CaptureScreen(isConfirmation: true)),
+        );
+        return;
+      }
+
+      // Conferma rifiutata ma la finestra è ancora aperta: si torna
+      // alla schermata di conferma (che mostrerà il motivo del
+      // rifiuto e permetterà di riprovare subito un altro scatto).
+      if (isConfirmation && next.step == CaptureStep.rejected) {
+        Navigator.of(context).pop();
+        return;
       }
     });
 
@@ -56,7 +99,7 @@ class GeneratingScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (state.step != CaptureStep.error) ...[
+                if (!_isTerminal(state.step)) ...[
                   const PokeballSpinner(size: 96),
                   const SizedBox(height: 32),
                 ] else ...[
@@ -64,7 +107,19 @@ class GeneratingScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                 ],
                 GbaDialogBox(text: _messageFor(state.step), fontSize: 18),
-                if (state.step == CaptureStep.error) ...[
+                if (state.step == CaptureStep.sightingExpired) ...[
+                  const SizedBox(height: 20),
+                  PixelButton(
+                    label: 'RICOMINCIA',
+                    onPressed: () {
+                      ref.read(captureFlowProvider.notifier).reset();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const CaptureScreen()),
+                        (route) => route.isFirst,
+                      );
+                    },
+                  ),
+                ] else if (state.step == CaptureStep.error) ...[
                   const SizedBox(height: 20),
                   PixelButton(
                     label: 'TORNA INDIETRO',

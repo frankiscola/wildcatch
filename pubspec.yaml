@@ -30,6 +30,14 @@ dependencies:
   # Riconoscimento specie on-device: gratuito, offline, nessuna API key
   google_mlkit_image_labeling: ^0.16.1
 
+  # Anti-cattura-da-internet/rivista (vedi lib/services/liveness_service.dart):
+  # - image: decodifica/analisi dei frame per il punteggio di parallasse
+  # - sensors_plus: giroscopio, per verificare che il telefono si sia
+  #   davvero mosso fisicamente durante lo scatto ("poor man's AR")
+  # Entrambe pure logica/sensori nativi: zero costi ricorrenti.
+  image: ^4.2.0
+  sensors_plus: ^6.0.1
+
   # Font pixel-art in stile GBA
   google_fonts: ^8.2.1
 

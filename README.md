@@ -70,7 +70,9 @@ mosse, piano evolutivo, contesto di cattura ED evoluzione),
 
 ```
 supabase/
-  migrations/0001_init.sql          # tabelle, RLS, bucket storage
+  migrations/
+    0001_init.sql                    # tabelle, RLS, bucket storage
+    0002_anti_spoof.sql              # sightings + photo_hashes (vedi sotto)
   functions/
     _shared/                        # porting TS dei motori Dart
       typing_engine.ts
@@ -78,15 +80,23 @@ supabase/
       movepool.ts
       evolution.ts
       cors.ts
-    generate-creature/index.ts      # orchestratore della cattura
+      finalize_capture.ts           # logica di cattura condivisa (ex generate-creature)
+      phash.ts                      # hash percettivo, per il doppio avvistamento
+    generate-creature/index.ts      # percorso diretto, tenuto per test manuali
+    resolve-sighting/index.ts       # percorso normale: doppio avvistamento
 ```
 
-`generate-creature` fa esattamente quello che faceva la simulazione
-locale: calcola tipo, statistiche, mosse iniziali e piano evolutivo,
-salva la riga in `captures` rispettando le policy RLS (l'utente può
-scrivere solo le proprie righe) e restituisce il JSON che
-`Creature.fromJson` si aspetta già lato Flutter — non serve toccare
-altro codice Dart.
+`finalize_capture.ts` contiene la logica che prima viveva interamente
+in `generate-creature`: calcola tipo, statistiche, mosse iniziali e
+piano evolutivo, salva la riga in `captures` rispettando le policy RLS
+e restituisce il JSON che `Creature.fromJson` si aspetta già lato
+Flutter. Ora viene richiamata da due punti:
+
+- `generate-creature/index.ts`, percorso diretto (un solo scatto,
+  nessuna verifica anti-spoofing) — utile per test da terminale, **non
+  più usato dalla UI normale**.
+- `resolve-sighting/index.ts`, il percorso che la UI usa davvero: vedi
+  la sezione "Anti-cattura-da-internet" più sotto.
 
 ### Deploy
 
@@ -95,8 +105,9 @@ npm install -g supabase
 supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 
-supabase db push                          # crea tabelle, RLS, bucket
+supabase db push                          # crea tabelle, RLS, bucket (incl. 0002_anti_spoof.sql)
 supabase functions deploy generate-creature
+supabase functions deploy resolve-sighting
 ```
 
 Poi in `lib/services/supabase_service.dart` sostituisci
@@ -136,15 +147,57 @@ con buone probabilità di tipo fuoco/terra/acciaio/normale — un buon
 modo per confermare che il motore di tipizzazione è stato portato
 correttamente in TypeScript.
 
+## Anti-cattura-da-internet/rivista
+
+Cinque meccanismi, pensati per alzare l'attrito di chi prova a
+catturare da una foto trovata online invece che da un animale reale.
+Nessuno di questi da solo è infallibile (vedi i commenti nei rispettivi
+file): l'obiettivo è la somma, non un singolo controllo perfetto.
+
+1. **Burst + parallasse** (`lib/services/liveness_service.dart`): 3
+   frame ravvicinati, block-matching a griglia 3x3, punteggio di
+   quanto i blocchi si muovono in modo disomogeneo tra loro. Vicino a
+   zero = probabile superficie piatta.
+2. **Profondità** (`lib/services/depth_check_service.dart`): SOLO
+   scaffold, degrada sempre a "non disponibile" finché non si scrive
+   il codice nativo (vedi i commenti nel file per cosa implementare
+   su iOS/Android). Non blocca mai nulla da solo.
+3. **Correlazione col giroscopio** ("poor man's AR", stesso file del
+   punto 1): il telefono deve essersi fisicamente mosso un minimo
+   durante lo scatto. Frame "mossi" ma giroscopio fermo (o viceversa)
+   è un'incoerenza sospetta.
+4. **Finestra temporale** (`kSightingWindowDuration` in
+   `capture_flow_provider.dart`, 20 minuti): il secondo scatto deve
+   arrivare entro questo tempo dal primo, altrimenti tutto si annulla
+   (`CaptureStep.sightingExpired`).
+5. **Doppio avvistamento** (`supabase/functions/resolve-sighting/`):
+   il vero cuore del sistema. Il primo scatto registra un
+   "avvistamento pending"; il secondo, per essere accettato, deve
+   avvenire entro ~300m dal primo, con una specie coerente (se
+   rilevata), e con un'immagine NÉ identica alla prima (altrimenti è
+   la stessa foto statica riproposta) NÉ troppo simile a una foto già
+   vista da un altro utente (dedup globale via `photo_hashes`,
+   hash percettivo in `_shared/phash.ts`).
+
+I punti 1-4 viaggiano nel `CaptureContext.liveness` inviato al
+server come indizio, MAI come unica difesa (un client manomesso può
+sempre mentire su questi valori) — la barriera davvero robusta è il 5,
+perché non dipende da nulla che il client dichiari di aver misurato.
+
+Tutti i segnali/soglie (raggio di ricerca del block-matching, soglie
+di distanza Hamming, 300m, 20 minuti...) sono punti di partenza
+ragionevoli ma NON calibrati su dati reali: vanno testati su device
+veri e aggiustati.
+
 ## Cosa manca ancora
 
 1. **Generazione immagini reale**: oggi `front_sprite_url` e
    `back_sprite_url` sono placeholder (= la foto originale). Il punto
    esatto dove agganciare il servizio AI è commentato con TODO in
-   `supabase/functions/generate-creature/index.ts`.
+   `supabase/functions/_shared/finalize_capture.ts`.
 
 2. **Edge function `evolve-creature`** (non ancora scritta): stesso
-   pattern di `generate-creature`, ma userà anche
+   pattern di `finalize_capture.ts`, ma userà anche
    `determineSecondType` (da portare da `evolution_engine.dart`) e
    riceverà il contesto ATTUALE oltre all'id della creatura.
 
@@ -152,12 +205,13 @@ correttamente in TypeScript.
    opzionale se si preferisce generare l'incontro lato client): serve
    per collegare `BattleScreen` al resto del flusso.
 
-4. **Permessi piattaforma**:
-   - Android (`android/app/src/main/AndroidManifest.xml`): `CAMERA`,
-     `ACCESS_FINE_LOCATION`, `INTERNET`.
-   - iOS (`ios/Runner/Info.plist`): `NSCameraUsageDescription`,
-     `NSLocationWhenInUseUsageDescription`,
-     `NSPhotoLibraryUsageDescription`.
+4. **Codice nativo per il segnale di profondità** (meccanismo 2,
+   opzionale): vedi i TODO in `depth_check_service.dart`. Oggi il
+   segnale è sempre `null` su ogni device.
+
+5. **Calibrazione su device reali** di tutte le soglie del piano
+   anti-spoofing (vedi sezione sopra): sono state scritte a tavolino,
+   mai testate con hardware vero.
 
 ## Avvio
 

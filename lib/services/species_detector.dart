@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 /// Riconosce l'animale in una foto usando Google ML Kit Image
@@ -31,6 +32,27 @@ class SpeciesDetector {
       // Non deve mai bloccare la cattura: se il modello fallisce,
       // si procede senza suggerimento di specie.
       return null;
+    }
+  }
+
+  /// Come [detectFromFile], ma per byte già in memoria (i frame del
+  /// burst catturato da CameraCaptureService non passano più da un
+  /// XFile scelto con ImagePicker). ML Kit su questa versione vuole
+  /// un path su disco, quindi scriviamo un file temporaneo usa-e-getta.
+  Future<String?> detectFromBytes(Uint8List bytes) async {
+    File? tempFile;
+    try {
+      tempFile = await File(
+        '${Directory.systemTemp.path}/wildcatch_species_${DateTime.now().microsecondsSinceEpoch}.jpg',
+      ).create();
+      await tempFile.writeAsBytes(bytes);
+      return await detectFromFile(tempFile);
+    } catch (e) {
+      return null;
+    } finally {
+      if (tempFile != null && await tempFile.exists()) {
+        await tempFile.delete();
+      }
     }
   }
 

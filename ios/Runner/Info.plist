@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>WildCatch usa la fotocamera per scattare foto dal vivo agli animali da trasformare in creature.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WildCatch usa la posizione per determinare il meteo e il tipo di terreno del luogo di cattura.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
