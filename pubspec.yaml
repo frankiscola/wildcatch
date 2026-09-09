@@ -38,6 +38,9 @@ dependencies:
   image: ^4.2.0
   sensors_plus: ^6.0.1
 
+  # Ricorda se il tutorial iniziale è già stato mostrato
+  shared_preferences: ^2.3.2
+
   # Font pixel-art in stile GBA
   google_fonts: ^8.2.1
 

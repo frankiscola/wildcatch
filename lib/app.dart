@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
-import 'screens/home_screen.dart';
+import 'screens/app_gate.dart';
 
 class WildcatchApp extends StatelessWidget {
   const WildcatchApp({super.key});
@@ -8,10 +8,10 @@ class WildcatchApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Wildcatch',
+      title: 'WildKin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const HomeScreen(),
+      home: const AppGate(),
     );
   }
 }

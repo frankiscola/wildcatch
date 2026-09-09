@@ -39,18 +39,18 @@ class TypingEngine {
   }
 
   Map<String, double> _baseScores() => {
-        'normale': 5,
         'fuoco': 3,
         'acqua': 3,
         'elettro': 3,
         'erba': 3,
         'ghiaccio': 2,
+        'veleno': 2,
         'terra': 3,
-        'roccia': 3,
         'volante': 3,
-        'spettro': 2,
-        'buio': 2,
+        'psico': 2,
         'coleottero': 3,
+        'roccia': 3,
+        'buio': 2,
       };
 
   void _applyTemperature(Map<String, double> scores, double celsius) {
@@ -80,7 +80,7 @@ class TypingEngine {
         scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 7;
         break;
       case 'fog':
-        scores['spettro'] = (scores['spettro'] ?? 0) + 5;
+        scores['psico'] = (scores['psico'] ?? 0) + 4;
         scores['veleno'] = (scores['veleno'] ?? 0) + 3;
         break;
       case 'clear':
@@ -124,12 +124,12 @@ class TypingEngine {
         scores['coleottero'] = (scores['coleottero'] ?? 0) + 4;
         break;
       case Biome.cittaUrbana:
-        scores['acciaio'] = (scores['acciaio'] ?? 0) + 5;
-        scores['normale'] = (scores['normale'] ?? 0) + 3;
+        scores['elettro'] = (scores['elettro'] ?? 0) + 5;
+        scores['roccia'] = (scores['roccia'] ?? 0) + 3;
         break;
       case Biome.pianura:
-        scores['normale'] = (scores['normale'] ?? 0) + 3;
-        scores['erba'] = (scores['erba'] ?? 0) + 2;
+        scores['erba'] = (scores['erba'] ?? 0) + 4;
+        scores['terra'] = (scores['terra'] ?? 0) + 2;
         break;
       case Biome.deserto:
         scores['terra'] = (scores['terra'] ?? 0) + 7;
@@ -142,12 +142,11 @@ class TypingEngine {
 
   void _applyTimeOfDay(Map<String, double> scores, bool isNight) {
     if (isNight) {
-      scores['spettro'] = (scores['spettro'] ?? 0) + 4;
-      scores['buio'] = (scores['buio'] ?? 0) + 5;
-      scores['psico'] = (scores['psico'] ?? 0) + 2;
+      scores['buio'] = (scores['buio'] ?? 0) + 6;
+      scores['psico'] = (scores['psico'] ?? 0) + 4;
     } else {
-      scores['normale'] = (scores['normale'] ?? 0) + 1;
       scores['volante'] = (scores['volante'] ?? 0) + 1;
+      scores['coleottero'] = (scores['coleottero'] ?? 0) + 1;
     }
   }
 

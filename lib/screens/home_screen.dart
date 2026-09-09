@@ -5,6 +5,8 @@ import '../widgets/route_background.dart';
 import '../widgets/pixel_button.dart';
 import 'capture_screen.dart';
 import 'pokedex_screen.dart';
+import 'help_screen.dart';
+import 'tutorial_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -12,6 +14,22 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('WILDKIN'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Aiuto',
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
+          ),
+        ],
+      ),
+      extendBodyBehindAppBar: true,
       body: RouteBackground(
         child: SafeArea(
           child: Padding(
@@ -35,6 +53,17 @@ class HomeScreen extends StatelessWidget {
                   background: AppColors.sapphireBlue,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PokedexScreen()),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextButton.icon(
+                  icon: const Icon(Icons.play_circle_outline, color: AppColors.panelBrown),
+                  label: Text(
+                    'Come funziona?',
+                    style: AppFonts.body(color: AppColors.panelBrown, fontSize: 15),
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TutorialScreen()),
                   ),
                 ),
               ],
@@ -67,7 +96,7 @@ class _TitleLockup extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                'WILDCATCH',
+                'WILDKIN',
                 style: AppFonts.pixelTitle(
                   fontSize: 22,
                   color: AppColors.rubyRed,

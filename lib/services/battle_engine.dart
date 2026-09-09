@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/creature.dart';
 import '../models/move.dart';
+import '../models/type_chart.dart';
 import '../models/wild_encounter.dart';
 
 /// Esito di un singolo attacco.
@@ -8,14 +9,30 @@ class AttackResult {
   final bool hit;
   final int damage;
   final bool fainted; // true se il bersaglio è stato messo KO
+  final double effectiveness; // 0, 0.25, 0.5, 1, 2 o 4 (due tipi deboli)
 
-  const AttackResult({required this.hit, required this.damage, required this.fainted});
+  const AttackResult({
+    required this.hit,
+    required this.damage,
+    required this.fainted,
+    this.effectiveness = 1.0,
+  });
+
+  /// Messaggio in stile Pokédex da mostrare dopo l'attacco, o null se
+  /// non c'è nulla di notevole da segnalare (效果 normale).
+  String? get effectivenessMessage {
+    if (effectiveness <= 0) return 'Non ha alcun effetto...';
+    if (effectiveness >= 4) return 'È DEVASTANTE!';
+    if (effectiveness >= 2) return 'È superefficace!';
+    if (effectiveness < 1) return 'Non è molto efficace...';
+    return null; // effetto normale, nessun messaggio speciale
+  }
 }
 
 /// Gestisce la risoluzione dei turni di battaglia e il tentativo
 /// di cattura. Il danno usa una versione semplificata della formula
-/// ufficiale (niente STAB/efficacia di tipo per l'MVP, facilmente
-/// aggiungibile in seguito con una tabella di efficacia tipo x tipo).
+/// ufficiale (niente STAB per l'MVP, ma con efficacia di tipo, vedi
+/// TypeChart).
 class BattleEngine {
   final Random _random;
 
@@ -36,6 +53,7 @@ class BattleEngine {
           ? _wildDefense(target)
           : _wildSpDefense(target),
       targetCurrentHp: target.currentHp,
+      defenderTypes: target.types,
     );
   }
 
@@ -54,6 +72,7 @@ class BattleEngine {
           : _wildSpAttack(attacker),
       defenseStat: move.category == MoveCategory.fisica ? stats.defense : stats.spDefense,
       targetCurrentHp: target.currentHp,
+      defenderTypes: target.types,
     );
   }
 
@@ -63,6 +82,7 @@ class BattleEngine {
     required int attackStat,
     required int defenseStat,
     required int targetCurrentHp,
+    required List<String> defenderTypes,
   }) {
     if (move.category == MoveCategory.stato) {
       return const AttackResult(hit: true, damage: 0, fainted: false);
@@ -71,13 +91,24 @@ class BattleEngine {
     final hit = _random.nextInt(100) < move.accuracy;
     if (!hit) return const AttackResult(hit: false, damage: 0, fainted: false);
 
-    // Formula di danno semplificata (schema classico, senza STAB/efficacia).
+    final effectiveness = TypeChart.effectiveness(move.type, defenderTypes);
+    if (effectiveness == 0) {
+      return AttackResult(hit: true, damage: 0, fainted: false, effectiveness: 0);
+    }
+
+    // Formula di danno semplificata (schema classico), con
+    // l'efficacia di tipo applicata come moltiplicatore finale.
     final base = (((2 * attackerLevel / 5 + 2) * move.power * attackStat / defenseStat) / 50) + 2;
     final randomFactor = 0.85 + _random.nextDouble() * 0.15;
-    final damage = max(1, (base * randomFactor).floor());
+    final damage = max(1, (base * randomFactor * effectiveness).floor());
 
     final fainted = damage >= targetCurrentHp;
-    return AttackResult(hit: true, damage: damage, fainted: fainted);
+    return AttackResult(
+      hit: true,
+      damage: damage,
+      fainted: fainted,
+      effectiveness: effectiveness,
+    );
   }
 
   /// Tentativo di cattura: più la creatura selvatica è indebolita,

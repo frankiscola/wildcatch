@@ -20,18 +20,18 @@ export interface CaptureContextJson {
 
 function baseScores(): Record<string, number> {
   return {
-    normale: 5,
     fuoco: 3,
     acqua: 3,
     elettro: 3,
     erba: 3,
     ghiaccio: 2,
+    veleno: 2,
     terra: 3,
-    roccia: 3,
     volante: 3,
-    spettro: 2,
-    buio: 2,
+    psico: 2,
     coleottero: 3,
+    roccia: 3,
+    buio: 2,
   };
 }
 
@@ -66,7 +66,7 @@ function applyWeather(scores: Record<string, number>, condition: string) {
       add(scores, "ghiaccio", 7);
       break;
     case "fog":
-      add(scores, "spettro", 5);
+      add(scores, "psico", 4);
       add(scores, "veleno", 3);
       break;
     case "clear":
@@ -110,12 +110,12 @@ function applyBiome(scores: Record<string, number>, biome: string) {
       add(scores, "coleottero", 4);
       break;
     case "cittaUrbana":
-      add(scores, "acciaio", 5);
-      add(scores, "normale", 3);
+      add(scores, "elettro", 5);
+      add(scores, "roccia", 3);
       break;
     case "pianura":
-      add(scores, "normale", 3);
-      add(scores, "erba", 2);
+      add(scores, "erba", 4);
+      add(scores, "terra", 2);
       break;
     case "deserto":
       add(scores, "terra", 7);
@@ -128,12 +128,11 @@ function applyBiome(scores: Record<string, number>, biome: string) {
 
 function applyTimeOfDay(scores: Record<string, number>, isNight: boolean) {
   if (isNight) {
-    add(scores, "spettro", 4);
-    add(scores, "buio", 5);
-    add(scores, "psico", 2);
+    add(scores, "buio", 6);
+    add(scores, "psico", 4);
   } else {
-    add(scores, "normale", 1);
     add(scores, "volante", 1);
+    add(scores, "coleottero", 1);
   }
 }
 
