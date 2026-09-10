@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/type_chart.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../theme/type_badge_assets.dart';
 import '../widgets/route_background.dart';
 
 /// Menu di aiuto/info: reference sempre disponibile su come funzionano
@@ -264,18 +265,31 @@ class _TypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = TypeColors.of(type);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 12, vertical: small ? 3 : 5),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text(
-        type.toUpperCase(),
-        style: AppFonts.body(
-          fontSize: small ? 11 : 13,
-          color: Colors.white,
-          weight: FontWeight.w700,
+    final assetPath = TypeBadgeAssets.of(type);
+    final size = small ? 28.0 : 40.0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: size,
+          height: size,
+          child: assetPath != null
+              ? Image.asset(assetPath, fit: BoxFit.contain)
+              : Container(
+                  decoration: BoxDecoration(color: TypeColors.of(type), shape: BoxShape.circle),
+                ),
         ),
-      ),
+        SizedBox(width: small ? 5 : 8),
+        Text(
+          type[0].toUpperCase() + type.substring(1),
+          style: AppFonts.body(
+            fontSize: small ? 12 : 14,
+            color: AppColors.dialogText,
+            weight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
