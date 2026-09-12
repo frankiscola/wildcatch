@@ -84,12 +84,6 @@ const BY_TYPE: Record<string, MoveJson[]> = {
     { name: "Psicoshock", type: "psico", category: "speciale", power: 80, accuracy: 100, max_pp: 10, tier: 2 },
     { name: "Psicocinesi", type: "psico", category: "speciale", power: 90, accuracy: 100, max_pp: 10, tier: 3 },
   ],
-  coleottero: [
-    { name: "Attacco Furia", type: "coleottero", category: "fisica", power: 15, accuracy: 85, max_pp: 20, tier: 1 },
-    { name: "Ronzio", type: "coleottero", category: "speciale", power: 40, accuracy: 100, max_pp: 20, tier: 1 },
-    { name: "Megatorma", type: "coleottero", category: "fisica", power: 90, accuracy: 100, max_pp: 10, tier: 2 },
-    { name: "Attacco Prima Vera", type: "coleottero", category: "fisica", power: 70, accuracy: 100, max_pp: 15, tier: 3 },
-  ],
   roccia: [
     { name: "Lancio Massi", type: "roccia", category: "fisica", power: 50, accuracy: 90, max_pp: 15, tier: 1 },
     { name: "Tackle Rio", type: "roccia", category: "fisica", power: 45, accuracy: 95, max_pp: 20, tier: 1 },

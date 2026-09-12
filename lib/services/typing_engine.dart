@@ -48,7 +48,6 @@ class TypingEngine {
         'terra': 3,
         'volante': 3,
         'psico': 2,
-        'coleottero': 3,
         'roccia': 3,
         'buio': 2,
       };
@@ -59,7 +58,6 @@ class TypingEngine {
       scores['terra'] = (scores['terra'] ?? 0) + 3;
     } else if (celsius >= 22) {
       scores['erba'] = (scores['erba'] ?? 0) + 3;
-      scores['coleottero'] = (scores['coleottero'] ?? 0) + 2;
     } else if (celsius <= 5) {
       scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 6;
     } else if (celsius <= 12) {
@@ -101,7 +99,6 @@ class TypingEngine {
         break;
       case 'primavera':
         scores['erba'] = (scores['erba'] ?? 0) + 3;
-        scores['coleottero'] = (scores['coleottero'] ?? 0) + 2;
         break;
       case 'autunno':
         scores['terra'] = (scores['terra'] ?? 0) + 2;
@@ -121,7 +118,6 @@ class TypingEngine {
         break;
       case Biome.foresta:
         scores['erba'] = (scores['erba'] ?? 0) + 6;
-        scores['coleottero'] = (scores['coleottero'] ?? 0) + 4;
         break;
       case Biome.cittaUrbana:
         scores['elettro'] = (scores['elettro'] ?? 0) + 5;
@@ -146,7 +142,6 @@ class TypingEngine {
       scores['psico'] = (scores['psico'] ?? 0) + 4;
     } else {
       scores['volante'] = (scores['volante'] ?? 0) + 1;
-      scores['coleottero'] = (scores['coleottero'] ?? 0) + 1;
     }
   }
 

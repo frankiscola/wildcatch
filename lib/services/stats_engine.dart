@@ -26,7 +26,6 @@ class StatsEngine {
     'terra': {'attack': 5, 'defense': 5},
     'volante': {'speed': 7, 'spAttack': 3},
     'psico': {'spAttack': 8, 'spDefense': 3},
-    'coleottero': {'attack': 3, 'speed': 4},
     'roccia': {'defense': 9, 'hp': 3},
     'spettro': {'spAttack': 5, 'spDefense': 5},
     'drago': {'attack': 6, 'spAttack': 6, 'hp': 3},

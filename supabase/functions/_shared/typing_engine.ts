@@ -29,7 +29,6 @@ function baseScores(): Record<string, number> {
     terra: 3,
     volante: 3,
     psico: 2,
-    coleottero: 3,
     roccia: 3,
     buio: 2,
   };
@@ -45,7 +44,6 @@ function applyTemperature(scores: Record<string, number>, celsius: number) {
     add(scores, "terra", 3);
   } else if (celsius >= 22) {
     add(scores, "erba", 3);
-    add(scores, "coleottero", 2);
   } else if (celsius <= 5) {
     add(scores, "ghiaccio", 6);
   } else if (celsius <= 12) {
@@ -87,7 +85,6 @@ function applySeason(scores: Record<string, number>, season: string) {
       break;
     case "primavera":
       add(scores, "erba", 3);
-      add(scores, "coleottero", 2);
       break;
     case "autunno":
       add(scores, "terra", 2);
@@ -107,7 +104,6 @@ function applyBiome(scores: Record<string, number>, biome: string) {
       break;
     case "foresta":
       add(scores, "erba", 6);
-      add(scores, "coleottero", 4);
       break;
     case "cittaUrbana":
       add(scores, "elettro", 5);
@@ -132,7 +128,6 @@ function applyTimeOfDay(scores: Record<string, number>, isNight: boolean) {
     add(scores, "psico", 4);
   } else {
     add(scores, "volante", 1);
-    add(scores, "coleottero", 1);
   }
 }
 

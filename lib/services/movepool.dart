@@ -80,12 +80,6 @@ class MovePool {
       Move(name: 'Psicoshock', type: 'psico', category: MoveCategory.speciale, power: 80, accuracy: 100, maxPp: 10, tier: 2),
       Move(name: 'Psicocinesi', type: 'psico', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 10, tier: 3),
     ],
-    'coleottero': [
-      Move(name: 'Attacco Furia', type: 'coleottero', category: MoveCategory.fisica, power: 15, accuracy: 85, maxPp: 20, tier: 1),
-      Move(name: 'Ronzio', type: 'coleottero', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 20, tier: 1),
-      Move(name: 'Megatorma', type: 'coleottero', category: MoveCategory.fisica, power: 90, accuracy: 100, maxPp: 10, tier: 2),
-      Move(name: 'Attacco Prima Vera', type: 'coleottero', category: MoveCategory.fisica, power: 70, accuracy: 100, maxPp: 15, tier: 3),
-    ],
     'roccia': [
       Move(name: 'Lancio Massi', type: 'roccia', category: MoveCategory.fisica, power: 50, accuracy: 90, maxPp: 15, tier: 1),
       Move(name: 'Tackle Rio', type: 'roccia', category: MoveCategory.fisica, power: 45, accuracy: 95, maxPp: 20, tier: 1),

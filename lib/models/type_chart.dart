@@ -1,26 +1,26 @@
-/// Tabella di efficacia tra i 12 tipi finali del gioco.
+/// Effectiveness table for the 11 final types in the game.
 ///
-/// Ogni riga descrive, dal punto di vista del tipo DIFENSORE, come
-/// reagisce se colpito da una mossa di un certo tipo:
-///  - weakTo: tipi contro cui è debole (subisce 2x danno)
-///  - resists: tipi contro cui resiste (subisce 0.5x danno)
-///  - immuneTo: tipi a cui è immune (subisce 0x danno)
-/// Se un tipo attaccante non compare in nessuna delle tre liste, il
-/// moltiplicatore è 1x (nessun effetto).
+/// Each entry describes, from the DEFENDING type's point of view, how
+/// it reacts when hit by a move of a given type:
+///  - weakTo: types it's weak against (takes 2x damage)
+///  - resists: types it resists (takes 0.5x damage)
+///  - immuneTo: types it's immune to (takes 0x damage)
+/// If an attacking type doesn't appear in any of the three lists, the
+/// multiplier is 1x (no effect).
 ///
-/// NOTA: se una creatura ha due tipi, i moltiplicatori dei due tipi
-/// si moltiplicano tra loro (esattamente come nei giochi originali):
-/// una mossa Acqua contro un bersaglio Fuoco/Roccia fa 2x * 2x = 4x.
+/// NOTE: if a creature has two types, the multipliers from both types
+/// are multiplied together (exactly like in the original games): a
+/// Water move against a Fire/Rock target deals 2x * 2x = 4x damage.
 class TypeChart {
   static const List<String> orderedTypes = [
     'fuoco', 'acqua', 'elettro', 'erba', 'ghiaccio', 'veleno',
-    'terra', 'volante', 'psico', 'coleottero', 'roccia', 'buio',
+    'terra', 'volante', 'psico', 'roccia', 'buio',
   ];
 
   static const Map<String, _TypeMatchups> _chart = {
     'fuoco': _TypeMatchups(
       weakTo: {'acqua', 'terra', 'roccia'},
-      resists: {'fuoco', 'erba', 'ghiaccio', 'coleottero'},
+      resists: {'fuoco', 'erba', 'ghiaccio'},
     ),
     'acqua': _TypeMatchups(
       weakTo: {'elettro', 'erba', 'ghiaccio'},
@@ -31,16 +31,16 @@ class TypeChart {
       resists: {'elettro', 'volante'},
     ),
     'erba': _TypeMatchups(
-      weakTo: {'fuoco', 'coleottero', 'veleno'},
+      weakTo: {'fuoco', 'veleno', 'volante'},
       resists: {'acqua', 'elettro', 'erba', 'terra'},
     ),
     'ghiaccio': _TypeMatchups(
-      weakTo: {'fuoco'},
+      weakTo: {'fuoco', 'volante'},
       resists: {'ghiaccio'},
     ),
     'veleno': _TypeMatchups(
       weakTo: {'terra', 'psico'},
-      resists: {'erba', 'veleno', 'coleottero', 'roccia'},
+      resists: {'erba', 'veleno', 'roccia'},
     ),
     'terra': _TypeMatchups(
       weakTo: {'acqua', 'erba', 'ghiaccio'},
@@ -52,16 +52,12 @@ class TypeChart {
       immuneTo: {'terra'},
     ),
     'psico': _TypeMatchups(
-      weakTo: {'buio', 'coleottero'},
-      resists: {'psico'},
-    ),
-    'coleottero': _TypeMatchups(
-      weakTo: {'fuoco', 'volante', 'roccia'},
-      resists: {'erba', 'terra'},
+      weakTo: {'buio', 'fuoco'},
+      resists: {'psico', 'terra'},
     ),
     'roccia': _TypeMatchups(
       weakTo: {'acqua', 'erba'},
-      resists: {'fuoco', 'veleno', 'volante'},
+      resists: {'fuoco', 'volante'},
     ),
     'buio': _TypeMatchups(
       weakTo: {'psico'},
@@ -69,10 +65,10 @@ class TypeChart {
     ),
   };
 
-  /// Vista leggibile dei matchup, nell'ordine di [orderedTypes], per
-  /// la schermata di aiuto in-app. `_chart` resta privata perché la
-  /// usa solo [effectiveness]; questo getter è l'unica via pensata
-  /// per il resto dell'app.
+  /// Readable view of the matchups, in [orderedTypes] order, for the
+  /// in-app help screen. `_chart` stays private because only
+  /// [effectiveness] uses it directly; this getter is the intended
+  /// way for the rest of the app to read matchup data.
   static List<TypeMatchupInfo> get all => orderedTypes.map((type) {
         final matchups = _chart[type]!;
         return TypeMatchupInfo(
@@ -83,8 +79,8 @@ class TypeChart {
         );
       }).toList();
 
-  /// Moltiplicatore di danno di una mossa di tipo [attackType] contro
-  /// un bersaglio con i tipi [defenderTypes] (1 o 2 tipi).
+  /// Damage multiplier for a move of type [attackType] against a
+  /// target with types [defenderTypes] (1 or 2 types).
   static double effectiveness(String attackType, List<String> defenderTypes) {
     var multiplier = 1.0;
     for (final defenderType in defenderTypes) {
@@ -99,15 +95,15 @@ class TypeChart {
       } else if (matchups.resists.contains(attack)) {
         multiplier *= 0.5;
       }
-      // altrimenti 1x, nessuna modifica
+      // otherwise 1x, no change
     }
     return multiplier;
   }
 }
 
-/// Un tipo con le sue relazioni (debole/resiste/immune), in forma
-/// pubblica e leggibile: usata dalla schermata di aiuto per costruire
-/// la tabella che vede il giocatore.
+/// A type with its relationships (weak/resists/immune), in a public,
+/// readable form: used by the help screen to build the table the
+/// player sees.
 class TypeMatchupInfo {
   final String type;
   final List<String> weakTo;

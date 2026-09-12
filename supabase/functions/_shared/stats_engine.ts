@@ -20,7 +20,6 @@ const TYPE_BIAS: Record<string, Partial<Record<keyof BaseStats, number>>> = {
   terra: { attack: 5, defense: 5 },
   volante: { speed: 7, sp_attack: 3 },
   psico: { sp_attack: 8, sp_defense: 3 },
-  coleottero: { attack: 3, speed: 4 },
   roccia: { defense: 9, hp: 3 },
   spettro: { sp_attack: 5, sp_defense: 5 },
   drago: { attack: 6, sp_attack: 6, hp: 3 },

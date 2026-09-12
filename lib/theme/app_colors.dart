@@ -68,7 +68,6 @@ class TypeColors {
     'terra': Color(0xFFE0C068),
     'volante': Color(0xFFA890F0),
     'psico': Color(0xFFF85888),
-    'coleottero': Color(0xFFA8B820),
     'roccia': Color(0xFFB8A038),
     'buio': Color(0xFF705848),
   };

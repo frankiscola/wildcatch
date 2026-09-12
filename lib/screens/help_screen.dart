@@ -33,12 +33,12 @@ class HelpScreen extends StatelessWidget {
                   'Meteo: pioggia → Acqua, temporale → Elettro, neve → '
                       'Ghiaccio, nebbia → Psico/Veleno.',
                   'Bioma: mare → Acqua, montagna → Roccia/Terra, foresta → '
-                      'Erba/Coleottero, città → Elettro/Roccia, deserto → '
+                      'Erba, città → Elettro/Roccia, deserto → '
                       'Terra/Fuoco, pianura → Erba/Terra.',
                   'Ora del giorno: notte favorisce Buio/Psico, giorno favorisce '
-                      'Volante/Coleottero.',
+                      'Volante.',
                   'Stagione: estate → Fuoco/Terra, inverno → Ghiaccio, '
-                      'primavera → Erba/Coleottero, autunno → Terra/Buio.',
+                      'primavera → Erba, autunno → Terra/Buio.',
                 ],
               ),
               SizedBox(height: 20),
