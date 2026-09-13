@@ -1,5 +1,6 @@
 import 'dart:math';
 import '../models/stats.dart';
+import '../models/type_chart.dart';
 
 /// Generates a Wildkin's base stats at capture time.
 ///
@@ -60,15 +61,42 @@ class StatsEngine {
   /// At the first evolution, base stats increase a bit (as happens
   /// when "species" changes in the classic games): +10-20% on each
   /// value, rounded.
-  BaseStats boostForEvolution(BaseStats current) {
+  ///
+  /// If [types] is passed (the Wildkin's types AFTER this evolution)
+  /// and [TypeChart.matchupsFor] finds a net defensive liability
+  /// (more x4 weaknesses than x4 resistances — see
+  /// [WildkinMatchups.hasNetQuadWeakness]), a small extra bonus is
+  /// applied to the purely defensive stats (HP/defense/ward) only.
+  /// This is deliberately NOT applied to attack/insight/speed: the
+  /// goal is to help a Wildkin survive the hits it's especially
+  /// vulnerable to, not to make it hit harder — and it's meant as a
+  /// light compensation on top of [EvolutionEngine]'s own risk-aware
+  /// selection, not a replacement for it. A combo can still end up
+  /// risky (rarely, on purpose); this just softens the impact.
+  BaseStats boostForEvolution(BaseStats current, {List<String>? types}) {
     int boosted(int v) => (v * (1.1 + _random.nextDouble() * 0.1)).round();
+
+    var hp = boosted(current.hp);
+    var attack = boosted(current.attack);
+    var defense = boosted(current.defense);
+    var insight = boosted(current.insight);
+    var ward = boosted(current.ward);
+    var speed = boosted(current.speed);
+
+    if (types != null && TypeChart.matchupsFor(types).hasNetQuadWeakness) {
+      const compensation = 1.08;
+      hp = (hp * compensation).round();
+      defense = (defense * compensation).round();
+      ward = (ward * compensation).round();
+    }
+
     return BaseStats(
-      hp: boosted(current.hp),
-      attack: boosted(current.attack),
-      defense: boosted(current.defense),
-      insight: boosted(current.insight),
-      ward: boosted(current.ward),
-      speed: boosted(current.speed),
+      hp: hp,
+      attack: attack,
+      defense: defense,
+      insight: insight,
+      ward: ward,
+      speed: speed,
     );
   }
 }

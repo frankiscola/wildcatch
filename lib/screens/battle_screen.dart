@@ -65,7 +65,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (_busy || _battleOver) return;
     setState(() => _busy = true);
 
-    final result = _engine.attackWild(attacker: _own, target: _wild, move: move);
+    final result =
+        _engine.attackWild(attacker: _own, target: _wild, move: move);
 
     setState(() {
       if (!result.hit) {
@@ -91,7 +92,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       return;
     }
     final wildMove = _wild.moves[(_wild.moves.length > 1) ? 1 : 0];
-    final counter = _engine.attackOwn(attacker: _wild, target: _own, move: wildMove);
+    final counter =
+        _engine.attackOwn(attacker: _wild, target: _own, move: wildMove);
 
     setState(() {
       if (counter.hit) {
@@ -189,9 +191,12 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final userId = Supabase.instance.client.auth.currentUser!.id;
 
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const GeneratingScreen(isConfirmation: true)),
+      MaterialPageRoute(
+          builder: (_) => const GeneratingScreen(isConfirmation: true)),
     );
-    await ref.read(captureFlowProvider.notifier).captureConfirmation(userId: userId);
+    await ref
+        .read(captureFlowProvider.notifier)
+        .captureConfirmation(userId: userId);
 
     // If we get here, GeneratingScreen came back without completing
     // the capture (rejection or error) — on success, navigation goes
@@ -313,7 +318,8 @@ class _HpRow extends StatelessWidget {
         color: AppColors.dialogBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(
+              color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       padding: const EdgeInsets.all(12),
@@ -332,7 +338,9 @@ class _HpRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               children: [
-                Container(height: 12, color: AppColors.dialogBorderOuter.withOpacity(0.12)),
+                Container(
+                    height: 12,
+                    color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
                 FractionallySizedBox(
                   widthFactor: fraction,
                   child: Container(height: 12, color: barColor),

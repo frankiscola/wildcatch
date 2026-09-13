@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/capture_context.dart';
 import '../models/evolution_plan.dart';
+import '../models/type_chart.dart';
 import 'typing_engine.dart';
 
 /// Decides, at capture time, whether a Wildkin will have 1 or 2
@@ -78,6 +79,13 @@ class EvolutionEngine {
   /// are then weighted and the best one is picked among those not
   /// already owned, giving weight to both moments in the Wildkin's
   /// life, not just the most recent one.
+  ///
+  /// Before picking a winner, every candidate's score is adjusted by
+  /// [_riskMultiplierFor]: this doesn't forbid any combo (a bad one
+  /// can still happen), it just makes the genuinely risky ones
+  /// (2+ quadruple weaknesses with nothing to offset them) less
+  /// likely to be the one that wins, and nudges things slightly
+  /// towards combos that end up with a quadruple resistance instead.
   String determineSecondType({
     required List<String> existingTypes,
     required CaptureContext captureContext,
@@ -111,9 +119,39 @@ class EvolutionEngine {
       return candidate;
     }
 
+    // Weigh down candidates that would create a defensively risky
+    // combo, weigh up the ones that end up net-safer, without ever
+    // dropping a candidate to zero (a "cursed" combo should be rare,
+    // not impossible).
+    for (final type in scores.keys.toList()) {
+      scores[type] = scores[type]! * _riskMultiplierFor([...existingTypes, type]);
+    }
+
     final sorted = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.first.key;
+  }
+
+  /// Score multiplier applied to a candidate second type, based on
+  /// how many x4 weaknesses/resistances the resulting two-type combo
+  /// would have (see [TypeChart.matchupsFor]).
+  ///  - 2+ x4 weaknesses and no x4 resistance to offset: heavily
+  ///    penalized, but not excluded outright.
+  ///  - exactly 1 x4 weakness and no offsetting resistance: mildly
+  ///    penalized.
+  ///  - no x4 weakness at all, plus at least one x4 resistance:
+  ///    small bonus, this is a genuinely strong combo.
+  ///  - anything else (including a weakness fully offset by a
+  ///    matching resistance): left untouched.
+  double _riskMultiplierFor(List<String> candidateTypes) {
+    final matchups = TypeChart.matchupsFor(candidateTypes);
+    final quadWeak = matchups.weakX4.length;
+    final quadResist = matchups.resistX4.length;
+
+    if (quadWeak >= 2 && quadResist == 0) return 0.5;
+    if (quadWeak == 1 && quadResist == 0) return 0.75;
+    if (quadWeak == 0 && quadResist > 0) return 1.15;
+    return 1.0;
   }
 
   /// Advances the evolution plan by one stage after an evolution.

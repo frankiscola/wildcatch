@@ -35,7 +35,9 @@ class _PixelButtonState extends State<PixelButton> {
 
   Color _darken(Color color, [double amount = 0.18]) {
     final hsl = HSLColor.fromColor(color);
-    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+    return hsl
+        .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
+        .toColor();
   }
 
   @override
@@ -64,7 +66,7 @@ class _PixelButtonState extends State<PixelButton> {
               ? []
               : [
                   BoxShadow(
-                    color: _darken(bg, 0.3).withOpacity(0.55),
+                    color: _darken(bg, 0.3).withValues(alpha: 0.55),
                     blurRadius: 0,
                     offset: const Offset(0, 4),
                   ),
@@ -79,7 +81,8 @@ class _PixelButtonState extends State<PixelButton> {
             ],
             Text(
               widget.label,
-              style: AppFonts.pixelTitle(fontSize: 12, color: widget.foreground),
+              style:
+                  AppFonts.pixelTitle(fontSize: 12, color: widget.foreground),
             ),
           ],
         ),

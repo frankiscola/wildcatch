@@ -109,7 +109,8 @@ class _Section extends StatelessWidget {
         color: AppColors.panelCream,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(
+              color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -120,7 +121,9 @@ class _Section extends StatelessWidget {
               Icon(icon, color: AppColors.emberRed, size: 22),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title, style: AppFonts.pixelTitle(fontSize: 16, color: AppColors.panelBrown)),
+                child: Text(title,
+                    style: AppFonts.pixelTitle(
+                        fontSize: 16, color: AppColors.panelBrown)),
               ),
             ],
           ),
@@ -162,7 +165,8 @@ class _TypeChartSection extends StatelessWidget {
         color: AppColors.panelCream,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(
+              color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -175,7 +179,8 @@ class _TypeChartSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Type chart',
-                  style: AppFonts.pixelTitle(fontSize: 16, color: AppColors.panelBrown),
+                  style: AppFonts.pixelTitle(
+                      fontSize: 16, color: AppColors.panelBrown),
                 ),
               ),
             ],
@@ -206,9 +211,10 @@ class _TypeMatchupCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6),
+        color: Colors.white.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TypeColors.of(info.type).withOpacity(0.4), width: 1.5),
+        border: Border.all(
+            color: TypeColors.of(info.type).withValues(alpha: 0.4), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,8 +222,10 @@ class _TypeMatchupCard extends StatelessWidget {
           _TypeBadge(type: info.type),
           const SizedBox(height: 8),
           _MatchupRow(label: 'Weak (2x)', types: info.weakTo, emptyDash: true),
-          _MatchupRow(label: 'Resists (0.5x)', types: info.resists, emptyDash: true),
-          if (info.immuneTo.isNotEmpty) _MatchupRow(label: 'Immune', types: info.immuneTo),
+          _MatchupRow(
+              label: 'Resists (0.5x)', types: info.resists, emptyDash: true),
+          if (info.immuneTo.isNotEmpty)
+            _MatchupRow(label: 'Immune', types: info.immuneTo),
         ],
       ),
     );
@@ -229,7 +237,8 @@ class _MatchupRow extends StatelessWidget {
   final List<String> types;
   final bool emptyDash;
 
-  const _MatchupRow({required this.label, required this.types, this.emptyDash = false});
+  const _MatchupRow(
+      {required this.label, required this.types, this.emptyDash = false});
 
   @override
   Widget build(BuildContext context) {
@@ -242,15 +251,20 @@ class _MatchupRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 92,
-            child: Text(label, style: AppFonts.body(fontSize: 12, color: AppColors.textMuted)),
+            child: Text(label,
+                style: AppFonts.body(fontSize: 12, color: AppColors.textMuted)),
           ),
           Expanded(
             child: types.isEmpty
-                ? Text('—', style: AppFonts.body(fontSize: 12, color: AppColors.textMuted))
+                ? Text('—',
+                    style:
+                        AppFonts.body(fontSize: 12, color: AppColors.textMuted))
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: types.map((t) => _TypeBadge(type: t, small: true)).toList(),
+                    children: types
+                        .map((t) => _TypeBadge(type: t, small: true))
+                        .toList(),
                   ),
           ),
         ],
@@ -279,7 +293,8 @@ class _TypeBadge extends StatelessWidget {
           child: assetPath != null
               ? Image.asset(assetPath, fit: BoxFit.contain)
               : Container(
-                  decoration: BoxDecoration(color: TypeColors.of(type), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: TypeColors.of(type), shape: BoxShape.circle),
                 ),
         ),
         SizedBox(width: small ? 5 : 8),

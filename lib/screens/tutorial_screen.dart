@@ -16,7 +16,8 @@ class _FlowStep {
   final IconData icon;
   final Color color;
   final String? caption;
-  final bool faded; // used to represent an "uncertain" stage (e.g. second evolution)
+  final bool
+      faded; // used to represent an "uncertain" stage (e.g. second evolution)
   final String? imageAsset;
 
   const _FlowStep({
@@ -59,9 +60,18 @@ final _pages = [
         'its own once you\'re stable (or press the button whenever you want). '
         'No photos from the gallery: it has to be a real animal, seen right now.',
     flow: [
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: 'You aim'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: 'Real animal'),
-      const _FlowStep(icon: Icons.auto_awesome, color: AppColors.emberRed, caption: 'Wildkin'),
+      const _FlowStep(
+          icon: Icons.camera_alt,
+          color: AppColors.tidalBlue,
+          caption: 'You aim'),
+      const _FlowStep(
+          icon: Icons.pets,
+          color: AppColors.grassGreen,
+          caption: 'Real animal'),
+      const _FlowStep(
+          icon: Icons.auto_awesome,
+          color: AppColors.emberRed,
+          caption: 'Wildkin'),
     ],
   ),
   _TutorialPage(
@@ -71,9 +81,18 @@ final _pages = [
         'the same animal again and photographing it close to where you first '
         'saw it. This makes sure it\'s real, not a photo found online.',
     flow: [
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: '1st shot'),
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: '2nd shot'),
-      const _FlowStep(icon: Icons.check_circle, color: AppColors.grassGreen, caption: 'Captured!'),
+      const _FlowStep(
+          icon: Icons.camera_alt,
+          color: AppColors.tidalBlue,
+          caption: '1st shot'),
+      const _FlowStep(
+          icon: Icons.camera_alt,
+          color: AppColors.tidalBlue,
+          caption: '2nd shot'),
+      const _FlowStep(
+          icon: Icons.check_circle,
+          color: AppColors.grassGreen,
+          caption: 'Captured!'),
     ],
     arrowLabels: ['within 20 min', ''],
   ),
@@ -84,7 +103,10 @@ final _pages = [
         'weather, time of day, season, and place. Here\'s an example: a hot '
         'summer day. Find all the details in the Help menu.',
     flow: [
-      const _FlowStep(icon: Icons.wb_sunny, color: Color(0xFFF2A93B), caption: 'Hot, summer'),
+      const _FlowStep(
+          icon: Icons.wb_sunny,
+          color: Color(0xFFF2A93B),
+          caption: 'Hot, summer'),
       _FlowStep(
         icon: Icons.circle,
         color: Colors.transparent,
@@ -107,9 +129,15 @@ final _pages = [
         'and moment of the evolution. You\'ll never know the exact level: '
         'only a rough hint.',
     flow: [
-      const _FlowStep(icon: Icons.pets, color: AppColors.tidalBlue, caption: 'Base\nLv. 5'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: 'Stage 2'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.emberRed, caption: 'Stage 3?', faded: true),
+      const _FlowStep(
+          icon: Icons.pets, color: AppColors.tidalBlue, caption: 'Base\nLv. 5'),
+      const _FlowStep(
+          icon: Icons.pets, color: AppColors.grassGreen, caption: 'Stage 2'),
+      const _FlowStep(
+          icon: Icons.pets,
+          color: AppColors.emberRed,
+          caption: 'Stage 3?',
+          faded: true),
     ],
     arrowLabels: ['?', '?'],
   ),
@@ -121,9 +149,18 @@ final _pages = [
         'they grow. The more you weaken an animal in battle, the easier it '
         'will be to catch.',
     flow: [
-      _FlowStep(icon: Icons.sports_martial_arts, color: AppColors.emberRed, caption: 'Battle'),
-      _FlowStep(icon: Icons.trending_up, color: AppColors.grassGreen, caption: 'Levels up'),
-      _FlowStep(icon: Icons.auto_fix_high, color: AppColors.tidalBlue, caption: 'New move'),
+      _FlowStep(
+          icon: Icons.sports_martial_arts,
+          color: AppColors.emberRed,
+          caption: 'Battle'),
+      _FlowStep(
+          icon: Icons.trending_up,
+          color: AppColors.grassGreen,
+          caption: 'Levels up'),
+      _FlowStep(
+          icon: Icons.auto_fix_high,
+          color: AppColors.tidalBlue,
+          caption: 'New move'),
     ],
   ),
 ];
@@ -163,7 +200,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
     if (_page == _pages.length - 1) {
       _finish();
     } else {
-      _controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      _controller.nextPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
@@ -188,7 +226,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   onPressed: _finish,
                   child: Text(
                     widget.isFirstLaunch ? 'SKIP' : 'CLOSE',
-                    style: AppFonts.body(color: AppColors.panelBrown, fontSize: 15),
+                    style: AppFonts.body(
+                        color: AppColors.panelBrown, fontSize: 15),
                   ),
                 ),
               ),
@@ -197,7 +236,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   controller: _controller,
                   itemCount: _pages.length,
                   onPageChanged: (i) => setState(() => _page = i),
-                  itemBuilder: (context, i) => _TutorialPageView(page: _pages[i]),
+                  itemBuilder: (context, i) =>
+                      _TutorialPageView(page: _pages[i]),
                 ),
               ),
               _DotsIndicator(count: _pages.length, current: _page),
@@ -240,7 +280,10 @@ class _TutorialPageView extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: AppColors.brandGradient,
               boxShadow: const [
-                BoxShadow(color: AppColors.shadowSoft, blurRadius: 12, offset: Offset(0, 6)),
+                BoxShadow(
+                    color: AppColors.shadowSoft,
+                    blurRadius: 12,
+                    offset: Offset(0, 6)),
               ],
             ),
             child: Icon(page.icon, color: Colors.white, size: 36),
@@ -249,7 +292,8 @@ class _TutorialPageView extends StatelessWidget {
           Text(
             page.title,
             textAlign: TextAlign.center,
-            style: AppFonts.pixelTitle(fontSize: 19, color: AppColors.panelBrown),
+            style:
+                AppFonts.pixelTitle(fontSize: 19, color: AppColors.panelBrown),
           ),
           if (page.flow != null) ...[
             const SizedBox(height: 20),
@@ -280,7 +324,9 @@ class _FlowDiagram extends StatelessWidget {
     for (var i = 0; i < steps.length; i++) {
       children.add(_FlowNode(step: steps[i]));
       if (i < steps.length - 1) {
-        final label = arrowLabels != null && i < arrowLabels!.length ? arrowLabels![i] : null;
+        final label = arrowLabels != null && i < arrowLabels!.length
+            ? arrowLabels![i]
+            : null;
         children.add(_FlowArrow(label: label));
       }
     }
@@ -320,7 +366,10 @@ class _FlowNode extends StatelessWidget {
                   color: step.color,
                   shape: BoxShape.circle,
                   border: step.faded
-                      ? Border.all(color: AppColors.panelBrown, width: 1.5, style: BorderStyle.solid)
+                      ? Border.all(
+                          color: AppColors.panelBrown,
+                          width: 1.5,
+                          style: BorderStyle.solid)
                       : null,
                 ),
                 child: Icon(step.icon, color: Colors.white, size: 26),
@@ -359,7 +408,8 @@ class _FlowArrow extends StatelessWidget {
                 style: AppFonts.body(fontSize: 10, color: AppColors.textMuted),
               ),
             ),
-          Icon(Icons.arrow_forward, color: AppColors.panelBrown.withOpacity(0.6), size: 22),
+          Icon(Icons.arrow_forward,
+              color: AppColors.panelBrown.withValues(alpha: 0.6), size: 22),
         ],
       ),
     );
@@ -384,7 +434,9 @@ class _DotsIndicator extends StatelessWidget {
           width: active ? 22 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: active ? AppColors.emberRed : AppColors.panelBrown.withOpacity(0.25),
+            color: active
+                ? AppColors.emberRed
+                : AppColors.panelBrown.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(4),
           ),
         );

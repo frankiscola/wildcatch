@@ -61,13 +61,21 @@ class LevelingService {
 
       if (_evolutionEngine.shouldEvolveNow(plan, level)) {
         final freshContext = await fetchCurrentContext();
-        final secondType = _evolutionEngine.determineSecondType(
-          existingTypes: types,
-          captureContext: wildkin.captureContext,
-          evolutionContext: freshContext,
-        );
-        types = [...types, secondType];
-        baseStats = _statsEngine.boostForEvolution(baseStats);
+
+        // The second type is only ever acquired ONCE, at the first
+        // evolution. A 3-stage line's second evolution (stage 2 -> 3)
+        // still boosts stats and advances the plan, but stays at 2
+        // types — Wildkin never go past a dual type.
+        if (types.length < 2) {
+          final secondType = _evolutionEngine.determineSecondType(
+            existingTypes: types,
+            captureContext: wildkin.captureContext,
+            evolutionContext: freshContext,
+          );
+          types = [...types, secondType];
+        }
+
+        baseStats = _statsEngine.boostForEvolution(baseStats, types: types);
         plan = _evolutionEngine.advance(plan);
         evolutionContext = freshContext;
         evolved = true;

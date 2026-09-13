@@ -96,7 +96,10 @@ class _WildkinTile extends StatelessWidget {
           color: AppColors.panelCream,
           borderRadius: BorderRadius.circular(18),
           boxShadow: const [
-            BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+            BoxShadow(
+                color: AppColors.shadowSoft,
+                blurRadius: 8,
+                offset: Offset(0, 4)),
           ],
         ),
         padding: const EdgeInsets.all(14),
@@ -119,9 +122,11 @@ class _WildkinTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(wildkin.nickname, style: AppFonts.pixelTitle(fontSize: 11)),
+                      Text(wildkin.nickname,
+                          style: AppFonts.pixelTitle(fontSize: 11)),
                       const SizedBox(width: 8),
-                      Text('Lv.${wildkin.level}', style: AppFonts.body(fontSize: 14)),
+                      Text('Lv.${wildkin.level}',
+                          style: AppFonts.body(fontSize: 14)),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -131,14 +136,19 @@ class _WildkinTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                     child: Stack(
                       children: [
-                        Container(height: 8, color: AppColors.dialogBorderOuter.withOpacity(0.12)),
+                        Container(
+                            height: 8,
+                            color: AppColors.dialogBorderOuter
+                                .withValues(alpha: 0.12)),
                         FractionallySizedBox(
                           widthFactor: fraction,
                           child: Container(
                             height: 8,
                             color: fraction > 0.5
                                 ? AppColors.grassGreen
-                                : (fraction > 0.2 ? const Color(0xFFE0A62B) : AppColors.emberRed),
+                                : (fraction > 0.2
+                                    ? const Color(0xFFE0A62B)
+                                    : AppColors.emberRed),
                           ),
                         ),
                       ],

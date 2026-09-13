@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wildkin.dart';
 import '../models/move.dart';
+import '../models/type_chart.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
@@ -56,6 +57,8 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 const SizedBox(height: 14),
                 _EvolutionCard(wildkin: wildkin),
+                const SizedBox(height: 14),
+                _TypeMatchupsCard(types: wildkin.types),
                 const SizedBox(height: 14),
                 _StatsCard(stats: stats),
                 const SizedBox(height: 14),
@@ -198,6 +201,111 @@ class _EvolutionCard extends StatelessWidget {
           Text(
             plan.timingLabel(),
             style: AppFonts.body(fontSize: 16, color: AppColors.emberRed),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shows what this Wildkin is weak against and resistant to, built
+/// straight from [TypeChart.matchupsFor] — the same source of truth
+/// [EvolutionEngine] and [StatsEngine] use to steer second-type
+/// selection and defensive compensation. x4/x0.25 entries (only
+/// possible once a Wildkin has two types) get an outlined badge and
+/// their own row, since they're the ones that actually swing a
+/// battle and are worth calling out clearly rather than burying them
+/// among the plain x2/x0.5 ones.
+class _TypeMatchupsCard extends StatelessWidget {
+  final List<String> types;
+  const _TypeMatchupsCard({required this.types});
+
+  @override
+  Widget build(BuildContext context) {
+    final matchups = TypeChart.matchupsFor(types);
+
+    return _Panel(
+      title: 'TYPE MATCHUPS',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (matchups.weakX4.isNotEmpty)
+            _MatchupRow(
+              label: 'QUADRUPLE WEAKNESS',
+              labelColor: AppColors.emberRed,
+              types: matchups.weakX4,
+              multiplierLabel: 'x4',
+              isDoubledUp: true,
+            ),
+          if (matchups.weakX2.isNotEmpty)
+            _MatchupRow(
+              label: 'Weak against',
+              types: matchups.weakX2,
+              multiplierLabel: 'x2',
+            ),
+          if (matchups.resistX4.isNotEmpty)
+            _MatchupRow(
+              label: 'QUADRUPLE RESISTANCE',
+              labelColor: AppColors.grassGreen,
+              types: matchups.resistX4,
+              multiplierLabel: 'x0.25',
+              isDoubledUp: true,
+            ),
+          if (matchups.resistX2.isNotEmpty)
+            _MatchupRow(
+              label: 'Resists',
+              types: matchups.resistX2,
+              multiplierLabel: 'x0.5',
+            ),
+          if (matchups.immune.isNotEmpty)
+            _MatchupRow(
+              label: 'Immune to',
+              types: matchups.immune,
+              multiplierLabel: 'IMMUNE',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchupRow extends StatelessWidget {
+  final String label;
+  final Color? labelColor;
+  final List<String> types;
+  final String multiplierLabel;
+  final bool isDoubledUp;
+
+  const _MatchupRow({
+    required this.label,
+    required this.types,
+    required this.multiplierLabel,
+    this.labelColor,
+    this.isDoubledUp = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppFonts.pixelTitle(fontSize: 9, color: labelColor ?? AppColors.textMuted),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: types
+                .map((t) => TypeMatchupBadge(
+                      type: t,
+                      multiplierLabel: multiplierLabel,
+                      isDoubledUp: isDoubledUp,
+                    ))
+                .toList(),
           ),
         ],
       ),

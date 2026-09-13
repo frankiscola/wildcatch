@@ -99,6 +99,74 @@ class TypeChart {
     }
     return multiplier;
   }
+
+  /// Full matchup breakdown for a Wildkin with 1 or 2 types: which
+  /// attacking types deal double/quadruple damage, which are
+  /// resisted at half/quarter, and which are a full immunity.
+  ///
+  /// This is the single source of truth for anything that cares
+  /// about x4 weaknesses/resistances (only possible with two types,
+  /// when both are weak/resistant to the same attacking type):
+  /// [EvolutionEngine] uses it to steer second-type selection away
+  /// from the worst combos, [StatsEngine] uses it to grant a small
+  /// defensive compensation, and the Field Journal UI uses it to
+  /// show the player why a Wildkin struggles against certain types.
+  static WildkinMatchups matchupsFor(List<String> defenderTypes) {
+    final weakX2 = <String>[];
+    final weakX4 = <String>[];
+    final resistX2 = <String>[];
+    final resistX4 = <String>[];
+    final immune = <String>[];
+
+    for (final attacker in orderedTypes) {
+      final multiplier = effectiveness(attacker, defenderTypes);
+      if (multiplier == 0.0) {
+        immune.add(attacker);
+      } else if (multiplier == 4.0) {
+        weakX4.add(attacker);
+      } else if (multiplier == 2.0) {
+        weakX2.add(attacker);
+      } else if (multiplier == 0.25) {
+        resistX4.add(attacker);
+      } else if (multiplier == 0.5) {
+        resistX2.add(attacker);
+      }
+    }
+
+    return WildkinMatchups(
+      weakX2: weakX2,
+      weakX4: weakX4,
+      resistX2: resistX2,
+      resistX4: resistX4,
+      immune: immune,
+    );
+  }
+}
+
+/// Result of [TypeChart.matchupsFor]: every attacking type sorted
+/// into the bucket that matches its multiplier against a given
+/// Wildkin. `weakX4` and `resistX4` are only ever non-empty for
+/// dual-type Wildkin.
+class WildkinMatchups {
+  final List<String> weakX2;
+  final List<String> weakX4;
+  final List<String> resistX2;
+  final List<String> resistX4;
+  final List<String> immune;
+
+  const WildkinMatchups({
+    required this.weakX2,
+    required this.weakX4,
+    required this.resistX2,
+    required this.resistX4,
+    required this.immune,
+  });
+
+  /// True if this type combination is a net defensive liability (more
+  /// quadruple weaknesses than quadruple resistances to offset them).
+  /// Used to decide whether a Wildkin deserves the small defensive
+  /// compensation bonus on evolution.
+  bool get hasNetQuadWeakness => weakX4.length > resistX4.length;
 }
 
 /// A type with its relationships (weak/resists/immune), in a public,
