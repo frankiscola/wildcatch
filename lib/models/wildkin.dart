@@ -32,6 +32,12 @@ class Wildkin {
 
   final String? speciesHint; // e.g. "cat", "dog", "seagull"
 
+  /// True if this Wildkin is one of the (at most 4) currently on the
+  /// active team. Enforced both client-side (see TeamScreen) and by
+  /// a DB trigger (captures.trg_enforce_max_team_size), so a race
+  /// between two devices can't sneak in a 5th member.
+  final bool isInTeam;
+
   const Wildkin({
     required this.id,
     required this.nickname,
@@ -48,6 +54,7 @@ class Wildkin {
     required this.captureContext,
     this.evolutionContext,
     this.speciesHint,
+    this.isInTeam = false,
   });
 
   ComputedStats computeStats() {
@@ -80,6 +87,7 @@ class Wildkin {
     CaptureContext? evolutionContext,
     String? frontSpriteUrl,
     String? backSpriteUrl,
+    bool? isInTeam,
   }) {
     return Wildkin(
       id: id,
@@ -97,6 +105,7 @@ class Wildkin {
       captureContext: captureContext,
       evolutionContext: evolutionContext ?? this.evolutionContext,
       speciesHint: speciesHint,
+      isInTeam: isInTeam ?? this.isInTeam,
     );
   }
 
@@ -118,6 +127,7 @@ class Wildkin {
       evolutionPlan:
           EvolutionPlan.fromJson(json['evolution_plan'] as Map<String, dynamic>),
       speciesHint: json['species_hint'] as String?,
+      isInTeam: json['is_in_team'] as bool? ?? false,
       captureContext: CaptureContext(
         capturedAt: DateTime.parse(json['captured_at'] as String),
         latitude: (json['latitude'] as num).toDouble(),

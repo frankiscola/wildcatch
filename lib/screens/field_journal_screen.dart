@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/type_badge.dart';
+import '../widgets/sprite_image.dart';
 import '../providers/capture_flow_provider.dart';
 import 'result_screen.dart';
 
@@ -83,12 +84,7 @@ class _WildkinCard extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: Image.network(
-                wildkin.frontSpriteUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.image_not_supported, color: AppColors.textMuted),
-              ),
+              child: SpriteImage(url: wildkin.frontSpriteUrl),
             ),
             const SizedBox(height: 6),
             Text(

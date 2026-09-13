@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/wildkin.dart';
+import '../models/capture_context.dart';
 import '../models/move.dart';
 import '../models/type_chart.dart';
 import '../theme/app_colors.dart';
@@ -8,12 +9,22 @@ import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
+import '../widgets/sprite_image.dart';
+import '../services/supabase_service.dart';
 import 'home_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final Wildkin wildkin;
 
-  const ResultScreen({super.key, required this.wildkin});
+  /// True (default) right after a capture, when the top banner and
+  /// "back to menu" flow make sense. Pass false when opening this
+  /// screen to look at an already-owned Wildkin (Field Journal, Team
+  /// screen): swaps the banner for a neutral one and turns the
+  /// bottom button into a plain "back" instead of resetting the nav
+  /// stack to the home screen.
+  final bool isNewCapture;
+
+  const ResultScreen({super.key, required this.wildkin, this.isNewCapture = true});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -21,10 +32,35 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen> {
   bool _showFront = true;
+  late Wildkin _wildkin;
+  bool _updatingTeam = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wildkin = widget.wildkin;
+  }
+
+  Future<void> _toggleTeam() async {
+    setState(() => _updatingTeam = true);
+    try {
+      final updated = await SupabaseService().setTeamMembership(
+        id: _wildkin.id,
+        isInTeam: !_wildkin.isInTeam,
+      );
+      setState(() => _wildkin = updated);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _updatingTeam = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final wildkin = widget.wildkin;
+    final wildkin = _wildkin;
     final stats = wildkin.computeStats();
 
     return Scaffold(
@@ -36,7 +72,9 @@ class _ResultScreenState extends State<ResultScreen> {
             child: Column(
               children: [
                 GbaDialogBox(
-                  text: 'Congratulations! You caught a new Wildkin!',
+                  text: widget.isNewCapture
+                      ? 'Congratulations! You caught a new Wildkin!'
+                      : _flavorLine(wildkin),
                   fontSize: 15,
                 ),
                 const SizedBox(height: 16),
@@ -46,6 +84,10 @@ class _ResultScreenState extends State<ResultScreen> {
                   onTap: () => setState(() => _showFront = !_showFront),
                   child: _FlipHint(showFront: _showFront),
                 ),
+                if (wildkin.speciesHint != null) ...[
+                  const SizedBox(height: 8),
+                  _OriginTag(speciesHint: wildkin.speciesHint!),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -54,6 +96,12 @@ class _ResultScreenState extends State<ResultScreen> {
                     const SizedBox(width: 10),
                     TypeBadgeRow(types: wildkin.types),
                   ],
+                ),
+                const SizedBox(height: 10),
+                PixelButton(
+                  label: wildkin.isInTeam ? 'REMOVE FROM TEAM' : 'ADD TO TEAM',
+                  background: wildkin.isInTeam ? AppColors.emberRed : AppColors.grassGreen,
+                  onPressed: _updatingTeam ? null : _toggleTeam,
                 ),
                 const SizedBox(height: 14),
                 _EvolutionCard(wildkin: wildkin),
@@ -64,20 +112,56 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(height: 14),
                 _MovesCard(moves: wildkin.moves.map((m) => m.move).toList()),
                 const SizedBox(height: 14),
-                _ContextSummary(wildkin: wildkin),
+                _CaptureStoryCard(wildkin: wildkin),
                 const SizedBox(height: 20),
                 PixelButton(
-                  label: 'BACK TO MENU',
+                  label: widget.isNewCapture ? 'BACK TO MENU' : 'BACK',
                   background: AppColors.tidalBlue,
-                  onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    (route) => false,
-                  ),
+                  onPressed: () {
+                    if (widget.isNewCapture) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        (route) => false,
+                      );
+                    } else {
+                      Navigator.of(context).pop();
+                    }
+                  },
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// A short, varied line for the banner when this Wildkin is being
+  /// looked up (not freshly caught) — picked deterministically from
+  /// its id so it doesn't flicker between rebuilds.
+  String _flavorLine(Wildkin wildkin) {
+    const lines = [
+      'Ready when you are.',
+      'Loyal and always watching.',
+      "Let's take a look.",
+      'Standing by.',
+    ];
+    return lines[wildkin.id.hashCode.abs() % lines.length];
+  }
+}
+
+/// Small pill under the sprite naming the real-world animal this
+/// Wildkin was derived from (e.g. "Derived from a cat"), when known.
+class _OriginTag extends StatelessWidget {
+  final String speciesHint;
+  const _OriginTag({required this.speciesHint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Derived from a $speciesHint',
+      style: AppFonts.body(fontSize: 13, color: AppColors.textMuted).copyWith(
+        fontStyle: FontStyle.italic,
       ),
     );
   }
@@ -106,14 +190,7 @@ class _SpriteStage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
-        child: Image.network(
-          spriteUrl,
-          key: ValueKey(spriteUrl),
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => Center(
-            child: Icon(Icons.image_not_supported, size: 48, color: AppColors.textMuted),
-          ),
-        ),
+        child: SpriteImage(url: spriteUrl, key: ValueKey(spriteUrl)),
       ),
     );
   }
@@ -229,6 +306,10 @@ class _TypeMatchupsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (types.length == 2) ...[
+            _TypingQualityChip(matchups: matchups),
+            const SizedBox(height: 10),
+          ],
           if (matchups.weakX4.isNotEmpty)
             _MatchupRow(
               label: 'QUADRUPLE WEAKNESS',
@@ -265,6 +346,38 @@ class _TypeMatchupsCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Quick verdict on a dual-type combo, computed from the same
+/// [WildkinMatchups] the rest of the panel already has — no extra
+/// calculation, just a friendlier label than reading four lists of
+/// badges. Only shown for dual types: a single type never has an x4
+/// anything, so there's nothing to call out.
+class _TypingQualityChip extends StatelessWidget {
+  final WildkinMatchups matchups;
+  const _TypingQualityChip({required this.matchups});
+
+  @override
+  Widget build(BuildContext context) {
+    String label;
+    Color color;
+    if (matchups.hasNetQuadWeakness) {
+      label = 'RISKY TYPING';
+      color = AppColors.emberRed;
+    } else if (matchups.resistX4.isNotEmpty) {
+      label = 'SOLID TYPING';
+      color = AppColors.grassGreen;
+    } else {
+      label = 'BALANCED TYPING';
+      color = AppColors.tidalBlue;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+      child: Text(label, style: AppFonts.pixelTitle(fontSize: 8, color: Colors.white)),
     );
   }
 }
@@ -326,8 +439,8 @@ class _StatsCard extends StatelessWidget {
           _StatBar(label: 'HP', value: stats.maxHp, max: 260, color: AppColors.grassGreen),
           _StatBar(label: 'ATK', value: stats.attack, max: 200, color: AppColors.emberRed),
           _StatBar(label: 'DEF', value: stats.defense, max: 200, color: AppColors.tidalBlue),
-          _StatBar(label: 'INSIGHT', value: stats.insight, max: 200, color: const Color(0xFF9C6ADE)),
-          _StatBar(label: 'WARD', value: stats.ward, max: 200, color: const Color(0xFF4FA8A0)),
+          _StatBar(label: 'SP. ATK', value: stats.insight, max: 200, color: const Color(0xFF9C6ADE)),
+          _StatBar(label: 'SP. DEF', value: stats.ward, max: 200, color: const Color(0xFF4FA8A0)),
           _StatBar(label: 'SPEED', value: stats.speed, max: 200, color: const Color(0xFFE0A62B)),
         ],
       ),
@@ -337,12 +450,14 @@ class _StatsCard extends StatelessWidget {
 
 class _StatBar extends StatelessWidget {
   final String label;
+  final String? subtitle;
   final int value;
   final int max;
   final Color color;
 
   const _StatBar({
     required this.label,
+    this.subtitle,
     required this.value,
     required this.max,
     required this.color,
@@ -357,7 +472,18 @@ class _StatBar extends StatelessWidget {
         children: [
           SizedBox(
             width: 56,
-            child: Text(label, style: AppFonts.pixelTitle(fontSize: 9)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: AppFonts.pixelTitle(fontSize: 9)),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    style: AppFonts.body(fontSize: 8, color: AppColors.textMuted),
+                  ),
+              ],
+            ),
           ),
           Expanded(
             child: ClipRRect(
@@ -430,13 +556,87 @@ class _MovesCard extends StatelessWidget {
   }
 }
 
-class _ContextSummary extends StatelessWidget {
+/// Turns the raw capture context (and, if it evolved, the evolution
+/// context too) into a couple of readable sentences instead of bare
+/// stat chips — e.g. "Caught at night, in the rain, near the coast."
+/// The chips stay underneath for a quick-glance version of the same
+/// data.
+class _CaptureStoryCard extends StatelessWidget {
   final Wildkin wildkin;
-  const _ContextSummary({required this.wildkin});
+  const _CaptureStoryCard({required this.wildkin});
 
   @override
   Widget build(BuildContext context) {
-    final ctx = wildkin.captureContext;
+    return _Panel(
+      title: 'CAPTURE STORY',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _sentenceFor(wildkin.captureContext, verb: 'Caught'),
+            style: AppFonts.body(fontSize: 14, color: AppColors.panelBrown),
+          ),
+          const SizedBox(height: 6),
+          _chips(wildkin.captureContext),
+          if (wildkin.evolutionContext != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              _sentenceFor(wildkin.evolutionContext!, verb: 'Evolved'),
+              style: AppFonts.body(fontSize: 14, color: AppColors.panelBrown),
+            ),
+            const SizedBox(height: 6),
+            _chips(wildkin.evolutionContext!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _sentenceFor(CaptureContext ctx, {required String verb}) {
+    final timeOfDay = ctx.isNightTime ? 'at night' : 'during the day';
+    final weather = _weatherPhrase(ctx.weatherCondition);
+    final place = _biomePhrase(ctx.biome);
+    return '$verb $timeOfDay, $weather, $place, in ${ctx.season}. '
+        '(${ctx.temperatureCelsius.round()}°C)';
+  }
+
+  String _weatherPhrase(String weatherCondition) {
+    switch (weatherCondition.toLowerCase()) {
+      case 'rain':
+        return 'in the rain';
+      case 'snow':
+        return 'in the snow';
+      case 'storm':
+        return 'during a storm';
+      case 'fog':
+        return 'in thick fog';
+      case 'clear':
+        return 'under a clear sky';
+      default:
+        return 'in $weatherCondition weather';
+    }
+  }
+
+  String _biomePhrase(Biome biome) {
+    switch (biome) {
+      case Biome.sea:
+        return 'near the coast';
+      case Biome.mountain:
+        return 'up in the mountains';
+      case Biome.forest:
+        return 'deep in a forest';
+      case Biome.urbanCity:
+        return 'in the middle of a city';
+      case Biome.plain:
+        return 'out on the open plains';
+      case Biome.desert:
+        return 'out in the desert';
+      case Biome.unknown:
+        return 'somewhere unremarkable';
+    }
+  }
+
+  Widget _chips(CaptureContext ctx) {
     final chips = <String>[
       '${ctx.temperatureCelsius.round()}°C',
       ctx.weatherCondition,
@@ -447,7 +647,6 @@ class _ContextSummary extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 6,
-      alignment: WrapAlignment.center,
       children: chips
           .map((label) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -457,7 +656,7 @@ class _ContextSummary extends StatelessWidget {
                 ),
                 child: Text(
                   label,
-                  style: AppFonts.body(fontSize: 14, color: AppColors.textOnDark),
+                  style: AppFonts.body(fontSize: 12, color: AppColors.textOnDark),
                 ),
               ))
           .toList(),

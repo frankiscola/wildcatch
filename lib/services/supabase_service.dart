@@ -210,6 +210,38 @@ class SupabaseService {
 
     return Wildkin.fromJson(row);
   }
+
+  /// Toggles whether a Wildkin is on the active team. The max-4 rule
+  /// is enforced server-side by a trigger (see migration
+  /// add_team_membership); if the team is already full, Postgres
+  /// raises and PostgrestException surfaces here as
+  /// [TeamFullException] so the UI can show a clean message instead
+  /// of a raw SQL error.
+  Future<Wildkin> setTeamMembership({
+    required String id,
+    required bool isInTeam,
+  }) async {
+    try {
+      final row = await client
+          .from('captures')
+          .update({'is_in_team': isInTeam})
+          .eq('id', id)
+          .select()
+          .single();
+
+      return Wildkin.fromJson(row);
+    } on PostgrestException catch (e) {
+      if (e.message.contains('Team is full')) {
+        throw TeamFullException();
+      }
+      rethrow;
+    }
+  }
+}
+
+class TeamFullException implements Exception {
+  @override
+  String toString() => 'Your team already has 4 Wildkin. Remove one first.';
 }
 
 class SupabaseServiceException implements Exception {

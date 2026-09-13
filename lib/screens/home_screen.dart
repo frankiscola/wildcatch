@@ -6,6 +6,7 @@ import '../widgets/pixel_button.dart';
 import 'capture_screen.dart';
 import 'field_journal_screen.dart';
 import 'help_screen.dart';
+import 'team_screen.dart';
 import 'tutorial_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -53,6 +54,15 @@ class HomeScreen extends StatelessWidget {
                   background: AppColors.tidalBlue,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const FieldJournalScreen()),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                PixelButton(
+                  label: 'MY TEAM',
+                  icon: Icons.groups,
+                  background: AppColors.grassGreen,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TeamScreen()),
                   ),
                 ),
                 const SizedBox(height: 18),
