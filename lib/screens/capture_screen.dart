@@ -8,7 +8,10 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../providers/capture_flow_provider.dart';
 import '../services/auto_capture_gate.dart';
+import '../services/context_builder.dart';
+import '../services/wild_encounter_generator.dart';
 import 'generating_screen.dart';
+import 'wildkin_picker_screen.dart';
 
 /// Capture screen, based only on the live camera (no gallery, see
 /// CameraCaptureService) and now with an AUTOMATIC shutter: as soon
@@ -37,6 +40,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   bool _cameraReady = false;
   String? _cameraError;
   bool _capturing = false;
+  bool _generatingEncounter = false;
 
   AutoCaptureGate? _autoGate;
 
@@ -108,6 +112,39 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     super.dispose();
   }
 
+  /// Generates a wild encounter from the CURRENT context (no new
+  /// shot needed: the sighting's existing photo is enough) and opens
+  /// the picker for which Wildkin to fight with. The pending sighting
+  /// stays open (countdown included) while battling.
+  Future<void> _fightBeforeConfirming() async {
+    if (_generatingEncounter || _capturing) return;
+    setState(() => _generatingEncounter = true);
+    await _autoGate?.stop();
+
+    try {
+      final context = await ContextBuilder().buildCurrentContext();
+      final wild = WildEncounterGenerator().generate(context);
+
+      if (!mounted) return;
+      await Navigator.of(context as BuildContext).push(
+        MaterialPageRoute(
+          builder: (_) => WildkinPickerScreen(wildEncounter: wild),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate the encounter: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _generatingEncounter = false);
+        _restartAutoGate();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(captureFlowProvider);
@@ -122,13 +159,16 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                if (widget.isConfirmation) _CountdownBanner(remaining: state.remaining),
+                if (widget.isConfirmation)
+                  _CountdownBanner(remaining: state.remaining),
                 if (widget.isConfirmation && state.rejectionReason != null) ...[
                   const SizedBox(height: 8),
                   _RejectionBanner(reason: state.rejectionReason!),
                 ],
                 const SizedBox(height: 12),
-                Expanded(child: _CameraFrame(ready: _cameraReady, error: _cameraError)),
+                Expanded(
+                    child:
+                        _CameraFrame(ready: _cameraReady, error: _cameraError)),
                 const SizedBox(height: 16),
                 GbaDialogBox(
                   text: widget.isConfirmation
@@ -139,10 +179,21 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 const SizedBox(height: 20),
                 _ShutterButton(
                   label: widget.isConfirmation ? 'CONFIRM!' : 'CAPTURE!',
-                  enabled: _cameraReady && !_capturing,
+                  enabled: _cameraReady && !_capturing && !_generatingEncounter,
                   progressStream: _autoGate?.progress,
                   onPressed: _onShutterPressed,
                 ),
+                if (widget.isConfirmation && state.pendingSighting != null) ...[
+                  const SizedBox(height: 12),
+                  PixelButton(
+                    label: 'FIGHT FIRST',
+                    icon: Icons.sports_martial_arts,
+                    background: AppColors.tidalBlue,
+                    onPressed: (_capturing || _generatingEncounter)
+                        ? null
+                        : _fightBeforeConfirming,
+                  ),
+                ],
               ],
             ),
           ),
@@ -238,7 +289,8 @@ class _CountdownBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             'Time left to confirm: $label',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -247,7 +299,8 @@ class _CountdownBanner extends StatelessWidget {
 }
 
 class _RejectionBanner extends StatelessWidget {
-  final Object reason; // SightingRejectionReason, loosely typed here to avoid another import
+  final Object
+      reason; // SightingRejectionReason, loosely typed here to avoid another import
 
   const _RejectionBanner({required this.reason});
 
@@ -285,7 +338,10 @@ class _CameraFrame extends ConsumerWidget {
         color: AppColors.panelCream,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 10, offset: Offset(0, 5)),
+          BoxShadow(
+              color: AppColors.shadowSoft,
+              blurRadius: 10,
+              offset: Offset(0, 5)),
         ],
       ),
       padding: const EdgeInsets.all(8),

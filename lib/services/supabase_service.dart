@@ -174,6 +174,42 @@ class SupabaseService {
 
     return Wildkin.fromJson(row);
   }
+
+  /// Persists a Wildkin's state after a won battle: level,
+  /// experience, HP, and possibly updated type/stats/moves if an
+  /// evolution triggered (see LevelingService).
+  Future<Wildkin> updateAfterBattle(Wildkin wildkin) async {
+    final row = await client
+        .from('captures')
+        .update({
+          'level': wildkin.level,
+          'current_exp': wildkin.currentExp,
+          'current_hp': wildkin.currentHp,
+          'assigned_type': wildkin.types,
+          'base_stats': wildkin.baseStats.toJson(),
+          'moves': wildkin.moves
+              .map((m) => {'move': m.move.toJson(), 'current_pp': m.currentPp})
+              .toList(),
+          'evolution_plan': wildkin.evolutionPlan.toJson(),
+          if (wildkin.evolutionContext != null)
+            'evolution_context': {
+              'captured_at':
+                  wildkin.evolutionContext!.capturedAt.toIso8601String(),
+              'latitude': wildkin.evolutionContext!.latitude,
+              'longitude': wildkin.evolutionContext!.longitude,
+              'elevation_m': wildkin.evolutionContext!.elevationMeters,
+              'weather_condition': wildkin.evolutionContext!.weatherCondition,
+              'temperature_c': wildkin.evolutionContext!.temperatureCelsius,
+              'humidity_percent': wildkin.evolutionContext!.humidityPercent,
+              'wind_speed_kmh': wildkin.evolutionContext!.windSpeedKmh,
+            },
+        })
+        .eq('id', wildkin.id)
+        .select()
+        .single();
+
+    return Wildkin.fromJson(row);
+  }
 }
 
 class SupabaseServiceException implements Exception {

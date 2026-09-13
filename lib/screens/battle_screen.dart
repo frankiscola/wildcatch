@@ -1,20 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/wildkin.dart';
 import '../models/move.dart';
 import '../models/wild_encounter.dart';
+import '../providers/capture_flow_provider.dart';
 import '../services/battle_engine.dart';
+import '../services/context_builder.dart';
+import '../services/leveling_service.dart';
+import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
+import 'generating_screen.dart';
 
 /// Battle screen: the player's own Wildkin (already captured) faces
-/// a wild Wildkin that was just photographed. The player can attack
-/// to weaken it (raising the capture odds) or attempt a capture at
-/// any time — the classic "weaken it, then try to catch it" loop.
-class BattleScreen extends StatefulWidget {
+/// a wild Wildkin generated from the sighting in progress.
+///
+/// Two possible outcomes:
+///  - the wild one faints: the player's Wildkin gains experience
+///    (LevelingService), which can level it up, evolve it, and teach
+///    it new moves — all persisted to Supabase.
+///  - the player attempts a capture: if the probability roll
+///    (BattleEngine) succeeds, the actual catch still goes through
+///    the existing double-sighting mechanism (a live confirmation
+///    photo) — it never bypasses it, so the server-side anti-spoofing
+///    check still applies here too.
+class BattleScreen extends ConsumerStatefulWidget {
   final Wildkin ownWildkin;
   final WildEncounter initialWild;
 
@@ -25,103 +40,172 @@ class BattleScreen extends StatefulWidget {
   });
 
   @override
-  State<BattleScreen> createState() => _BattleScreenState();
+  ConsumerState<BattleScreen> createState() => _BattleScreenState();
 }
 
-class _BattleScreenState extends State<BattleScreen> {
+class _BattleScreenState extends ConsumerState<BattleScreen> {
   final _engine = BattleEngine();
+  final _levelingService = LevelingService();
+
   late WildEncounter _wild;
-  late int _ownHp;
+  late Wildkin _own; // mirrors current HP as the battle progresses
   String _log = 'A wild Wildkin appears!';
   bool _busy = false;
   bool _battleOver = false;
+  bool _victory = false;
 
   @override
   void initState() {
     super.initState();
     _wild = widget.initialWild;
-    _ownHp = widget.ownWildkin.computeStats().maxHp;
+    _own = widget.ownWildkin;
   }
 
   Future<void> _useMove(Move move) async {
     if (_busy || _battleOver) return;
     setState(() => _busy = true);
 
-    final result = _engine.attackWild(
-      attacker: widget.ownWildkin,
-      target: _wild,
-      move: move,
-    );
+    final result = _engine.attackWild(attacker: _own, target: _wild, move: move);
 
     setState(() {
       if (!result.hit) {
-        _log = '${widget.ownWildkin.nickname} uses ${move.name}... but it misses!';
+        _log = '${_own.nickname} uses ${move.name}... but it misses!';
       } else {
         _wild = _wild.copyWith(
           currentHp: (_wild.currentHp - result.damage).clamp(0, _wild.maxHp),
         );
-        _log = '${widget.ownWildkin.nickname} uses ${move.name}! '
-            '${result.damage} damage.';
-        if (result.effectivenessMessage != null) {
-          _log += '\n${result.effectivenessMessage}';
-        }
+        final effectivenessNote = result.effectivenessMessage;
+        _log = '${_own.nickname} uses ${move.name}! ${result.damage} damage.'
+            '${effectivenessNote != null ? '\n$effectivenessNote' : ''}';
       }
     });
 
     if (_wild.currentHp <= 0) {
-      setState(() {
-        _log = 'The wild Wildkin is worn out! It should be easier to catch now.';
-        _battleOver = true;
-        _busy = false;
-      });
+      await _handleVictory();
       return;
     }
 
-    // The wild Wildkin counterattacks.
     await Future.delayed(const Duration(milliseconds: 500));
     if (_wild.moves.isEmpty) {
       setState(() => _busy = false);
       return;
     }
     final wildMove = _wild.moves[(_wild.moves.length > 1) ? 1 : 0];
-    final counter = _engine.attackOwn(
-      attacker: _wild,
-      target: widget.ownWildkin,
-      move: wildMove,
-    );
+    final counter = _engine.attackOwn(attacker: _wild, target: _own, move: wildMove);
 
     setState(() {
       if (counter.hit) {
-        _ownHp = (_ownHp - counter.damage).clamp(0, widget.ownWildkin.computeStats().maxHp);
+        _own = _own.copyWith(
+          currentHp: (_own.currentHp - counter.damage)
+              .clamp(0, _own.computeStats().maxHp),
+        );
+        final effectivenessNote = counter.effectivenessMessage;
         _log += '\nThe wild Wildkin strikes back with ${wildMove.name}! '
-            '${counter.damage} damage to ${widget.ownWildkin.nickname}.';
-        if (counter.effectivenessMessage != null) {
-          _log += '\n${counter.effectivenessMessage}';
-        }
+            '${counter.damage} damage to ${_own.nickname}.'
+            '${effectivenessNote != null ? '\n$effectivenessNote' : ''}';
       }
       _busy = false;
-      if (_ownHp <= 0) {
+      if (_own.currentHp <= 0) {
         _battleOver = true;
-        _log += '\n${widget.ownWildkin.nickname} can no longer battle!';
+        _log += '\n${_own.nickname} can no longer battle!';
       }
     });
   }
 
-  void _attemptCatch() {
-    if (_busy) return;
+  /// The wild one fainted: grant experience, handle any level-up,
+  /// evolution, or new move, and persist everything to Supabase.
+  Future<void> _handleVictory() async {
+    setState(() {
+      _log = 'The wild Wildkin is worn out!';
+      _busy = true;
+    });
+
+    try {
+      final gainedExp = _levelingService.expFromVictory(_wild.level);
+      final (updated, summary) = await _levelingService.grantExperience(
+        wildkin: _own,
+        gainedExp: gainedExp,
+        fetchCurrentContext: () => ContextBuilder().buildCurrentContext(),
+      );
+
+      final persisted = await SupabaseService().updateAfterBattle(updated);
+
+      final messages = <String>['${_own.nickname} won! +$gainedExp EXP.'];
+      if (summary.leveledUp) {
+        messages.add(
+          summary.levelsGained.length == 1
+              ? 'It grew to level ${summary.levelsGained.first}!'
+              : 'It grew all the way to level ${summary.levelsGained.last}!',
+        );
+      }
+      if (summary.evolved) {
+        messages.add('${_own.nickname} evolved!');
+      }
+      if (summary.learnedMove != null) {
+        messages.add('It learned ${summary.learnedMove!.name}!');
+      }
+
+      setState(() {
+        _own = persisted;
+        _log = messages.join('\n');
+        _battleOver = true;
+        _victory = true;
+        _busy = false;
+      });
+    } catch (e) {
+      setState(() {
+        _log = 'Victory earned, but I couldn\'t save the progress: $e';
+        _battleOver = true;
+        _victory = true;
+        _busy = false;
+      });
+    }
+  }
+
+  /// Attempts a capture: the probability roll is local/immediate, but
+  /// if it succeeds the REAL catch still goes through a live
+  /// confirmation photo (same mechanism as the double-sighting used
+  /// for direct capture) — it never bypasses it.
+  Future<void> _attemptCatch() async {
+    if (_busy || _battleOver) return;
+
     final probability = _engine.catchProbability(_wild);
     final success = _engine.attemptCatch(_wild);
 
+    if (!success) {
+      setState(() {
+        _battleOver = true;
+        _log = 'The Wildkin got away! (odds were '
+            '${(probability * 100).round()}%)';
+      });
+      return;
+    }
+
     setState(() {
-      _battleOver = true;
-      _log = success
-          ? 'Capture successful! (odds were ${(probability * 100).round()}%)'
-          : 'The Wildkin got away! (odds were ${(probability * 100).round()}%)';
+      _busy = true;
+      _log = 'Almost there! Take one more photo to confirm the capture.';
     });
 
-    // TODO: on success, this is where the logic that turns the
-    // WildEncounter into a real Wildkin (new EvolutionPlan, starter
-    // moveset) and saves it to Supabase should be invoked.
+    final userId = Supabase.instance.client.auth.currentUser!.id;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const GeneratingScreen(isConfirmation: true)),
+    );
+    await ref.read(captureFlowProvider.notifier).captureConfirmation(userId: userId);
+
+    // If we get here, GeneratingScreen came back without completing
+    // the capture (rejection or error) — on success, navigation goes
+    // straight to ResultScreen, clearing the stack, and this widget
+    // is no longer mounted.
+    if (!mounted) return;
+    final state = ref.read(captureFlowProvider);
+    setState(() {
+      _busy = false;
+      _battleOver = true;
+      _log = state.errorMessage ??
+          "Couldn't confirm the capture. The Wildkin remains free, but "
+              'you can go looking for it again.';
+    });
   }
 
   @override
@@ -136,20 +220,15 @@ class _BattleScreenState extends State<BattleScreen> {
               children: [
                 _WildHpBar(wild: _wild),
                 const SizedBox(height: 10),
-                _OwnHpBar(
-                  wildkin: widget.ownWildkin,
-                  currentHp: _ownHp,
-                ),
+                _OwnHpBar(wildkin: _own),
                 const SizedBox(height: 16),
-                Expanded(
-                  child: GbaDialogBox(text: _log, fontSize: 16),
-                ),
+                Expanded(child: GbaDialogBox(text: _log, fontSize: 16)),
                 const SizedBox(height: 16),
                 if (!_battleOver) ...[
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: widget.ownWildkin.moves
+                    children: _own.moves
                         .map((m) => PixelButton(
                               label: m.move.name.toUpperCase(),
                               background: AppColors.tidalBlue,
@@ -166,8 +245,9 @@ class _BattleScreenState extends State<BattleScreen> {
                   ),
                 ] else
                   PixelButton(
-                    label: 'CLOSE',
-                    onPressed: () => Navigator.of(context).pop(),
+                    label: _victory ? 'CONTINUE' : 'CLOSE',
+                    onPressed: () => Navigator.of(context)
+                        .popUntil((route) => route.isFirst),
                   ),
               ],
             ),
@@ -195,15 +275,14 @@ class _WildHpBar extends StatelessWidget {
 
 class _OwnHpBar extends StatelessWidget {
   final Wildkin wildkin;
-  final int currentHp;
-  const _OwnHpBar({required this.wildkin, required this.currentHp});
+  const _OwnHpBar({required this.wildkin});
 
   @override
   Widget build(BuildContext context) {
     return _HpRow(
       title: '${wildkin.nickname} · Lv.${wildkin.level}',
       types: wildkin.types,
-      current: currentHp,
+      current: wildkin.currentHp,
       max: wildkin.computeStats().maxHp,
     );
   }
