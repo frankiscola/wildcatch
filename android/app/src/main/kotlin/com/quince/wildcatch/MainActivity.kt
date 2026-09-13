@@ -1,4 +1,4 @@
-package com.quince.wildcatch
+package com.quince.wildkin
 
 import io.flutter.embedding.android.FlutterActivity
 

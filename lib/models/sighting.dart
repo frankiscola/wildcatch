@@ -1,5 +1,5 @@
-/// Esito della registrazione del PRIMO avvistamento (vedi
-/// resolve-sighting/index.ts, funzione record-sighting).
+/// Result of recording the FIRST sighting (see
+/// resolve-sighting/index.ts, function record-sighting).
 class SightingRecorded {
   final String sightingId;
   final DateTime expiresAt;
@@ -21,9 +21,9 @@ class SightingRecorded {
       );
 }
 
-/// Motivi per cui la conferma del secondo avvistamento può essere
-/// rifiutata dal server. Tenerli come enum (invece di stringhe sparse)
-/// rende più facile mostrare messaggi utente coerenti in tutta l'app.
+/// Reasons the confirmation of the second sighting can be rejected
+/// by the server. Kept as an enum (instead of scattered strings) so
+/// it's easier to show consistent user-facing messages across the app.
 enum SightingRejectionReason {
   expired,
   tooFar,
@@ -49,22 +49,22 @@ enum SightingRejectionReason {
     }
   }
 
-  /// Messaggio pensato per l'utente finale, in stile Pokédex/GBA
-  /// coerente col resto della UI (vedi GbaDialogBox).
+  /// User-facing message, styled consistently with the rest of the
+  /// UI (see GbaDialogBox).
   String get userMessage {
     switch (this) {
       case SightingRejectionReason.expired:
-        return 'Troppo tempo è passato dal primo avvistamento: individua di nuovo l\'animale prima di scattare.';
+        return 'Too much time has passed since the first sighting: spot the animal again before taking the shot.';
       case SightingRejectionReason.tooFar:
-        return 'Questo punto è troppo lontano dal primo avvistamento: deve trattarsi dello stesso animale, non troppo lontano.';
+        return 'This spot is too far from the first sighting: it needs to be the same animal, not too far away.';
       case SightingRejectionReason.speciesMismatch:
-        return 'Questo sembra un animale diverso da quello avvistato per primo.';
+        return 'This looks like a different animal from the one first spotted.';
       case SightingRejectionReason.duplicateImage:
-        return 'Questa foto sembra identica alla precedente: prova a fotografarlo di nuovo dal vivo, magari da un\'altra angolazione.';
+        return 'This photo looks identical to the previous one: try photographing it again live, maybe from another angle.';
       case SightingRejectionReason.suspiciousDuplicateOfOtherUser:
-        return 'Questa immagine sembra già vista altrove: assicurati di fotografare un animale reale davanti a te.';
+        return 'This image looks like it\'s already been seen elsewhere: make sure you\'re photographing a real animal in front of you.';
       case SightingRejectionReason.unknown:
-        return 'Non è stato possibile confermare l\'avvistamento. Riprova.';
+        return 'The sighting could not be confirmed. Please try again.';
     }
   }
 }

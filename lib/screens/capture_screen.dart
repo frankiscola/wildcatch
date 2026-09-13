@@ -10,20 +10,20 @@ import '../providers/capture_flow_provider.dart';
 import '../services/auto_capture_gate.dart';
 import 'generating_screen.dart';
 
-/// Schermata di cattura, basata solo sulla fotocamera live (niente
-/// galleria, vedi CameraCaptureService) e ora con scatto AUTOMATICO:
-/// appena il telefono, dopo essere stato puntato, resta fermo per una
-/// finestra continua, l'app scatta da sola (vedi AutoCaptureGate). Il
-/// pulsante resta comunque premibile in ogni momento per scattare
-/// subito, sia per chi lo preferisce sia come fallback sui device (o
-/// emulatori) dove il giroscopio non è disponibile o non attiva mai
-/// la fase "aiming".
+/// Capture screen, based only on the live camera (no gallery, see
+/// CameraCaptureService) and now with an AUTOMATIC shutter: as soon
+/// as the phone, after being pointed at something, holds still for a
+/// continuous window, the app captures on its own (see
+/// AutoCaptureGate). The button is still always pressable to capture
+/// immediately, both for players who prefer that and as a fallback
+/// on devices (or emulators) where the gyroscope isn't available or
+/// never triggers the "aiming" phase.
 ///
-/// Serve in due modalità, selezionate da [isConfirmation]:
-///  - false: primo avvistamento (meccanismo 5, passo 1)
-///  - true: conferma entro la finestra temporale (meccanismi 4 e 5,
-///    passo 2) — mostra anche il countdown e, se il server ha
-///    rifiutato il tentativo precedente, il motivo del rifiuto.
+/// Used in two modes, selected by [isConfirmation]:
+///  - false: first sighting (mechanism 5, step 1)
+///  - true: confirmation within the time window (mechanisms 4 and 5,
+///    step 2) — also shows the countdown and, if the server rejected
+///    the previous attempt, the rejection reason.
 class CaptureScreen extends ConsumerStatefulWidget {
   final bool isConfirmation;
 
@@ -58,10 +58,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     }
   }
 
-  /// Crea (o ricrea) il gate di auto-scatto. Va richiamato ogni volta
-  /// che si torna pronti per un nuovo tentativo: all'avvio della
-  /// schermata e dopo ogni scatto che non abbia portato via da questa
-  /// schermata (es. un rifiuto del server durante la conferma).
+  /// Creates (or recreates) the auto-capture gate. Must be called
+  /// again every time we're ready for a new attempt: on screen
+  /// startup and after any shot that didn't navigate away from this
+  /// screen (e.g. a server rejection during confirmation).
   void _restartAutoGate() {
     if (!_cameraReady || _capturing) return;
     _autoGate?.dispose();
@@ -70,7 +70,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     gate.onReady.then((_) {
       if (mounted && !_capturing) _onShutterPressed();
     });
-    setState(() {}); // fa ripartire lo StreamBuilder sul nuovo gate
+    setState(() {}); // restarts the StreamBuilder on the new gate
   }
 
   Future<void> _onShutterPressed() async {
@@ -96,9 +96,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
 
     if (!mounted) return;
     setState(() => _capturing = false);
-    // Se siamo ancora su questa schermata (es. il server ha
-    // rifiutato la conferma ed è tornato indietro), il giocatore può
-    // provare di nuovo: si riparte con un gate pulito.
+    // If we're still on this screen (e.g. the server rejected the
+    // confirmation and navigated back), the player can try again:
+    // start fresh with a clean gate.
     _restartAutoGate();
   }
 
@@ -114,7 +114,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isConfirmation ? 'CONFERMA AVVISTAMENTO' : 'CATTURA'),
+        title: Text(widget.isConfirmation ? 'CONFIRM SIGHTING' : 'CAPTURE'),
       ),
       body: RouteBackground(
         child: SafeArea(
@@ -132,13 +132,13 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 const SizedBox(height: 16),
                 GbaDialogBox(
                   text: widget.isConfirmation
-                      ? 'Ritrova lo stesso animale e tienilo inquadrato: scatterà da solo, oppure premi CONFERMA quando vuoi.'
-                      : 'Inquadra l\'animale e tieni fermo il telefono: scatterà da solo appena sei stabile, oppure premi CATTURA quando vuoi.',
+                      ? 'Find the same animal again and keep it in frame: it will fire on its own, or press CONFIRM whenever you want.'
+                      : 'Frame the animal and hold the phone steady: it will fire on its own once you\'re stable, or press CAPTURE whenever you want.',
                   fontSize: 16,
                 ),
                 const SizedBox(height: 20),
                 _ShutterButton(
-                  label: widget.isConfirmation ? 'CONFERMA!' : 'CATTURA!',
+                  label: widget.isConfirmation ? 'CONFIRM!' : 'CAPTURE!',
                   enabled: _cameraReady && !_capturing,
                   progressStream: _autoGate?.progress,
                   onPressed: _onShutterPressed,
@@ -152,10 +152,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 }
 
-/// Pulsante di scatto con un anello di avanzamento intorno: si
-/// riempie da solo man mano che AutoCaptureGate rileva stabilità, per
-/// far capire all'utente che l'app sta per scattare da sola (invece
-/// di sembrare bloccata, come nel primo giro di test).
+/// Shutter button with a progress ring around it: it fills on its
+/// own as AutoCaptureGate detects stability, to let the player know
+/// the app is about to fire on its own (instead of looking stuck,
+/// like in the first round of testing).
 class _ShutterButton extends StatelessWidget {
   final String label;
   final bool enabled;
@@ -175,7 +175,7 @@ class _ShutterButton extends StatelessWidget {
 
     final button = PixelButton(
       label: label,
-      icon: Icons.catching_pokemon,
+      icon: Icons.center_focus_strong,
       background: AppColors.grassGreen,
       onPressed: enabled ? onPressed : null,
     );
@@ -228,7 +228,7 @@ class _CountdownBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
-        color: urgent ? AppColors.rubyRed : AppColors.sapphireBlue,
+        color: urgent ? AppColors.emberRed : AppColors.tidalBlue,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -237,7 +237,7 @@ class _CountdownBanner extends StatelessWidget {
           const Icon(Icons.timer, color: Colors.white, size: 18),
           const SizedBox(width: 8),
           Text(
-            'Tempo rimasto per confermare: $label',
+            'Time left to confirm: $label',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
@@ -247,7 +247,7 @@ class _CountdownBanner extends StatelessWidget {
 }
 
 class _RejectionBanner extends StatelessWidget {
-  final Object reason; // SightingRejectionReason, tipizzato debolmente per evitare un altro import qui
+  final Object reason; // SightingRejectionReason, loosely typed here to avoid another import
 
   const _RejectionBanner({required this.reason});
 
@@ -257,14 +257,14 @@ class _RejectionBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.rubyRed.withOpacity(0.15),
+        color: AppColors.emberRed.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.rubyRed),
+        border: Border.all(color: AppColors.emberRed),
       ),
       child: Text(
         // ignore: avoid_dynamic_calls
         (reason as dynamic).userMessage as String,
-        style: TextStyle(color: AppColors.rubyRed.withOpacity(0.9)),
+        style: TextStyle(color: AppColors.emberRed.withOpacity(0.9)),
         textAlign: TextAlign.center,
       ),
     );

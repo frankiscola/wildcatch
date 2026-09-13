@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Riquadro di testo in stile RSE: angoli arrotondati, bordo
-/// sfumato blu-notte, sfondo crema chiaro e un'ombra morbida che
-/// lo fa "galleggiare" sopra lo sfondo, invece del doppio bordo
-/// squadrato/pixel usato nei giochi più vecchi.
+/// A retro-styled text box: rounded corners, a night-blue gradient
+/// border, a light cream background, and a soft shadow that makes it
+/// "float" above the background, instead of the squared/pixel
+/// double border used in older games.
 class GbaDialogBox extends StatelessWidget {
   final String text;
   final EdgeInsets padding;
@@ -27,7 +27,7 @@ class GbaDialogBox extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.sapphireBlue, AppColors.sapphireBlueDark],
+          colors: [AppColors.tidalBlue, AppColors.tidalBlueDark],
         ),
         boxShadow: const [
           BoxShadow(

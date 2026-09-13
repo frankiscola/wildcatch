@@ -1,21 +1,21 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/capture_context.dart';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../models/sighting.dart';
 
-/// Punto unico di accesso a Supabase: inizializzazione, upload
-/// della foto originale e invocazione della edge function che
-/// genera la creatura (sprite fronte/retro + tipo assegnato).
+/// Single point of access to Supabase: initialization, uploading the
+/// original photo, and invoking the edge function that generates the
+/// Wildkin (front/back sprites + assigned type).
 class SupabaseService {
   static SupabaseClient get client => Supabase.instance.client;
 
-  /// Da chiamare una sola volta in main() prima di runApp().
-  /// Credenziali del progetto Supabase "wildcatch" (ref
-  /// ffwfyhdorffzzbyvtlpv). Attenzione: la anon key è pubblica per
-  /// design (protetta dalle policy RLS, non da segretezza), ma se
-  /// pubblichi questo repo evita comunque di versionare chiavi in
-  /// chiaro per abitudine — meglio --dart-define o un file .env.
+  /// Call once in main() before runApp().
+  /// Credentials for the "wildkin" Supabase project (ref
+  /// ffwfyhdorffzzbyvtlpv). Note: the anon key is public by design
+  /// (protected by RLS policies, not by secrecy), but if you publish
+  /// this repo it's still good habit to avoid committing keys in
+  /// plain text — prefer --dart-define or a .env file.
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: 'https://ffwfyhdorffzzbyvtlpv.supabase.co',
@@ -23,8 +23,8 @@ class SupabaseService {
     );
   }
 
-  /// Carica la foto scattata nello storage bucket 'captures'
-  /// e restituisce il path del file caricato.
+  /// Uploads the captured photo to the 'captures' storage bucket and
+  /// returns the path of the uploaded file.
   Future<String> uploadOriginalPhoto({
     required String userId,
     required Uint8List photoBytes,
@@ -41,19 +41,19 @@ class SupabaseService {
     return client.storage.from('captures').getPublicUrl(fileName);
   }
 
-  /// Invoca la edge function 'generate-creature', percorso "diretto"
-  /// (nessun doppio avvistamento). Da qui in poi la UI normale NON la
-  /// usa più: il flusso di cattura passa da recordSighting +
-  /// confirmSighting (meccanismo 5). La teniamo comunque disponibile
-  /// per test manuali da terminale (vedi README) e come riferimento
-  /// per la logica condivisa che ora vive lato server in
+  /// Invokes the 'generate-wildkin' edge function, the "direct" path
+  /// (no double sighting). The normal UI no longer uses this from
+  /// here on: the capture flow now goes through recordSighting +
+  /// confirmSighting (mechanism 5). Still kept available for manual
+  /// testing from the terminal (see README) and as a reference for
+  /// the shared logic that now lives server-side in
   /// supabase/functions/_shared/finalize_capture.ts.
-  Future<Creature> generateCreature({
+  Future<Wildkin> generateWildkin({
     required String originalPhotoUrl,
     required CaptureContext context,
   }) async {
     final response = await client.functions.invoke(
-      'generate-creature',
+      'generate-wildkin',
       body: {
         'original_photo_url': originalPhotoUrl,
         'context': context.toJson(),
@@ -62,18 +62,18 @@ class SupabaseService {
 
     if (response.status != 200) {
       throw SupabaseServiceException(
-        'Generazione fallita (status ${response.status}).',
+        'Generation failed (status ${response.status}).',
       );
     }
 
-    return Creature.fromJson(response.data as Map<String, dynamic>);
+    return Wildkin.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Meccanismo 5 (doppio avvistamento), primo passo: registra il
-  /// primo scatto come "avvistamento" in attesa di conferma, SENZA
-  /// ancora generare una creatura. Il server calcola l'hash percettivo
-  /// della foto e controlla se combacia in modo sospetto con foto già
-  /// viste da altri utenti (vedi resolve-sighting/index.ts).
+  /// Mechanism 5 (double sighting), first step: records the first
+  /// shot as a "sighting" awaiting confirmation, WITHOUT generating a
+  /// Wildkin yet. The server computes the photo's perceptual hash and
+  /// checks whether it suspiciously matches photos already seen from
+  /// other users (see resolve-sighting/index.ts).
   Future<SightingRecorded> recordSighting({
     required String originalPhotoUrl,
     required CaptureContext context,
@@ -91,23 +91,23 @@ class SupabaseService {
 
     if (response.status != 200) {
       throw SupabaseServiceException(
-        'Impossibile registrare l\'avvistamento (status ${response.status}).',
+        'Could not record the sighting (status ${response.status}).',
       );
     }
 
     return SightingRecorded.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Meccanismo 5, secondo passo: conferma l'avvistamento precedente
-  /// con una seconda foto. Se il server ritiene plausibile che si
-  /// tratti dello stesso animale reale rivisto poco dopo (vicinanza
-  /// GPS, tempo trascorso, somiglianza-ma-non-identità dell'immagine),
-  /// finalizza la cattura e restituisce la creatura completa.
+  /// Mechanism 5, second step: confirms the previous sighting with a
+  /// second photo. If the server finds it plausible that this is the
+  /// same real animal seen again shortly after (GPS proximity, time
+  /// elapsed, image similar-but-not-identical), it finalizes the
+  /// capture and returns the complete Wildkin.
   ///
-  /// Lancia [SightingRejectedException] se il server rifiuta la
-  /// conferma, con un motivo già pronto per essere mostrato
-  /// all'utente (vedi SightingRejectionReason.userMessage).
-  Future<Creature> confirmSighting({
+  /// Throws [SightingRejectedException] if the server rejects the
+  /// confirmation, with a reason already prepared to show the player
+  /// (see SightingRejectionReason.userMessage).
+  Future<Wildkin> confirmSighting({
     required String sightingId,
     required String originalPhotoUrl,
     required CaptureContext context,
@@ -132,16 +132,16 @@ class SupabaseService {
 
     if (response.status != 200) {
       throw SupabaseServiceException(
-        'Conferma avvistamento fallita (status ${response.status}).',
+        'Sighting confirmation failed (status ${response.status}).',
       );
     }
 
-    return Creature.fromJson(response.data as Map<String, dynamic>);
+    return Wildkin.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Recupera tutte le creature catturate dall'utente corrente,
-  /// per popolare il "pokedex" personale.
-  Future<List<Creature>> getMyCreatures() async {
+  /// Fetches all the Wildkin caught by the current user, to populate
+  /// the personal Field Journal.
+  Future<List<Wildkin>> getMyWildkin() async {
     final userId = client.auth.currentUser?.id;
     if (userId == null) return [];
 
@@ -152,15 +152,16 @@ class SupabaseService {
         .order('captured_at', ascending: false);
 
     return (rows as List)
-        .map((row) => Creature.fromJson(row as Map<String, dynamic>))
+        .map((row) => Wildkin.fromJson(row as Map<String, dynamic>))
         .toList();
   }
 
-  /// Aggiorna il nickname di una creatura già salvata. Usato subito
-  /// dopo la cattura per sostituire il placeholder '???' con il nome
-  /// generato client-side (NameGenerator), combinando la specie
-  /// rilevata su device col tipo appena assegnato dal server.
-  Future<Creature> renameCreature({
+  /// Updates the nickname of an already-saved Wildkin. Used right
+  /// after capture to replace the '???' placeholder with the name
+  /// generated client-side (NameGenerator), combining the
+  /// on-device-detected species with the type just assigned by the
+  /// server.
+  Future<Wildkin> renameWildkin({
     required String id,
     required String nickname,
   }) async {
@@ -171,7 +172,7 @@ class SupabaseService {
         .select()
         .single();
 
-    return Creature.fromJson(row);
+    return Wildkin.fromJson(row);
   }
 }
 

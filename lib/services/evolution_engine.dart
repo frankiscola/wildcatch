@@ -3,17 +3,17 @@ import '../models/capture_context.dart';
 import '../models/evolution_plan.dart';
 import 'typing_engine.dart';
 
-/// Decide, alla cattura, se una creatura avrà 1 o 2 evoluzioni
-/// future (linea a 2 o 3 stadi) e a quale livello scatterà la
-/// prossima. Gestisce anche l'assegnazione del secondo tipo quando
-/// avviene la prima evoluzione, combinando il contesto di cattura
-/// con quello del momento esatto dell'evoluzione.
+/// Decides, at capture time, whether a Wildkin will have 1 or 2
+/// future evolutions (a 2- or 3-stage line) and at which level the
+/// next one will trigger. Also handles assigning the second type
+/// when the first evolution happens, combining the capture context
+/// with the context of the exact moment of evolution.
 ///
-/// I range di livello usati qui vivono in un unico posto:
-/// [EvolutionRanges], dentro evolution_plan.dart. Così l'indizio
-/// qualitativo mostrato al giocatore (calcolato in
-/// [EvolutionPlan.timingHint]) e le soglie generate qui non possono
-/// mai desincronizzarsi.
+/// The level ranges used here live in a single place:
+/// [EvolutionRanges], inside evolution_plan.dart. That way the
+/// qualitative hint shown to the player (computed in
+/// [EvolutionPlan.timingHint]) and the thresholds generated here can
+/// never drift out of sync.
 class EvolutionEngine {
   final Random _random;
   final TypingEngine _typingEngine;
@@ -22,11 +22,11 @@ class EvolutionEngine {
       : _random = random ?? Random(),
         _typingEngine = typingEngine ?? TypingEngine();
 
-  /// Genera il piano evolutivo completo al momento della cattura.
-  /// Il livello massimo è sempre 100; le soglie generate qui
-  /// restano nascoste al giocatore (si mostra solo [EvolutionPlan.timingLabel]).
+  /// Generates the full evolution plan at the moment of capture.
+  /// The level cap is always 100; the thresholds generated here stay
+  /// hidden from the player (only [EvolutionPlan.timingLabel] is shown).
   EvolutionPlan createInitialPlan() {
-    final totalStages = _random.nextBool() ? 2 : 3; // 50/50, personalizzabile
+    final totalStages = _random.nextBool() ? 2 : 3; // 50/50, configurable
 
     if (totalStages == 2) {
       final level = _randomInRange(EvolutionRanges.onlyJumpOfTwoStage);
@@ -49,35 +49,35 @@ class EvolutionEngine {
     );
   }
 
-  /// NOTA sul tipo del parametro: [LevelRange] è un record con campi
-  /// NOMINATI (`{int min, int max}` tra graffe). Va sempre usato
-  /// questo alias, e mai riscritto a mano come `(int min, int max)`
-  /// senza graffe: quest'ultimo è un record POSIZIONALE diverso, dove
-  /// `min`/`max` sono solo nomi documentali e `.min`/`.max` non sono
-  /// campi accessibili (si accede con `.$1`/`.$2`). Scrivendolo senza
-  /// graffe il codice compila comunque finché non lo si chiama con un
-  /// valore come `(min: 15, max: 30)`, che invece È named: lì scatta
-  /// il mismatch di tipo.
+  /// NOTE on the parameter type: [LevelRange] is a record with NAMED
+  /// fields (`{int min, int max}` in curly braces). Always use this
+  /// alias, and never rewrite it by hand as `(int min, int max)`
+  /// without braces: the latter is a different, POSITIONAL record,
+  /// where `min`/`max` are just documentation and `.min`/`.max` are
+  /// not accessible fields (you'd use `.$1`/`.$2` instead). Written
+  /// without braces the code still compiles until it's called with a
+  /// value like `(min: 15, max: 30)`, which IS named: that's where
+  /// the type mismatch shows up.
   int _randomInRange(LevelRange range) =>
       range.min + _random.nextInt(range.max - range.min + 1);
 
-  /// true se, dato il livello raggiunto, la creatura deve evolvere ora.
+  /// true if, given the level reached, the Wildkin should evolve now.
   bool shouldEvolveNow(EvolutionPlan plan, int currentLevel) {
     final threshold = plan.nextEvolutionLevel;
     if (threshold == null) return false;
     return currentLevel >= threshold;
   }
 
-  /// Determina il secondo tipo al momento dell'evoluzione, combinando:
-  /// - i tipi già posseduti dalla creatura
-  /// - il contesto della cattura originale
-  /// - il contesto ATTUALE (meteo/posizione/ora di quando evolve)
+  /// Determines the second type at the moment of evolution, combining:
+  /// - the types the Wildkin already has
+  /// - the original capture context
+  /// - the CURRENT context (weather/location/time at the moment it evolves)
   ///
-  /// Il motore di tipizzazione viene interrogato due volte (una per
-  /// il contesto di cattura, una per quello di evoluzione); i tipi
-  /// candidati vengono poi ponderati e si sceglie il migliore tra
-  /// quelli non già posseduti, dando peso a entrambi i momenti della
-  /// vita della creatura, non solo all'ultimo.
+  /// The typing engine is queried twice (once for the capture
+  /// context, once for the evolution context); the candidate types
+  /// are then weighted and the best one is picked among those not
+  /// already owned, giving weight to both moments in the Wildkin's
+  /// life, not just the most recent one.
   String determineSecondType({
     required List<String> existingTypes,
     required CaptureContext captureContext,
@@ -86,10 +86,10 @@ class EvolutionEngine {
     final captureTypes = _typingEngine.assignTypes(captureContext);
     final evolutionTypes = _typingEngine.assignTypes(evolutionContext);
 
-    // 1 punto se il tipo compare tra i candidati del contesto di
-    // cattura, 1.5 punti se compare in quello di evoluzione (pesiamo
-    // leggermente di più il presente, perché è il momento in cui la
-    // trasformazione avviene davvero).
+    // 1 point if the type appears among the capture-context
+    // candidates, 1.5 points if it appears in the evolution-context
+    // ones (we weight the present moment slightly more, since that's
+    // when the transformation actually happens).
     final scores = <String, double>{};
     for (final t in captureTypes) {
       if (existingTypes.contains(t)) continue;
@@ -101,9 +101,9 @@ class EvolutionEngine {
     }
 
     if (scores.isEmpty) {
-      // Fallback raro: nessun candidato nuovo, si ripesca dal motore
-      // di tipizzazione usando solo il contesto di evoluzione finché
-      // non esce un tipo diverso da quelli già posseduti.
+      // Rare fallback: no new candidates, so we keep drawing from the
+      // typing engine using only the evolution context until we get
+      // a type different from the ones already owned.
       String candidate;
       do {
         candidate = _typingEngine.assignTypes(evolutionContext).first;
@@ -116,7 +116,7 @@ class EvolutionEngine {
     return sorted.first.key;
   }
 
-  /// Avanza il piano evolutivo di uno stadio dopo un'evoluzione.
+  /// Advances the evolution plan by one stage after an evolution.
   EvolutionPlan advance(EvolutionPlan plan) {
     final newStage = plan.currentStage + 1;
     if (newStage >= plan.totalStages) {

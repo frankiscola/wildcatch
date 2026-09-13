@@ -1,7 +1,7 @@
-name: wildcatch
+name: wildkin
 description: >
-  Cattura animali reali e trasformali in creature in stile retro,
-  influenzate da meteo, luogo e ora della cattura.
+  Capture real animals and turn them into retro-style Wildkin,
+  shaped by the weather, place, and time of the capture.
 publish_to: 'none'
 version: 0.1.0
 
@@ -18,33 +18,33 @@ dependencies:
   # Backend
   supabase_flutter: ^2.5.6
 
-  # Fotocamera / galleria
+  # Camera / gallery
   image_picker: ^1.1.2
   camera: ^0.12.1
 
-  # Posizione, meteo, geocoding
+  # Location, weather, geocoding
   geolocator: ^14.0.3
   geocoding: ^5.0.0
   http: ^1.2.2
 
-  # Riconoscimento specie on-device: gratuito, offline, nessuna API key
+  # On-device species recognition: free, offline, no API key needed
   google_mlkit_image_labeling: ^0.16.1
 
-  # Anti-cattura-da-internet/rivista (vedi lib/services/liveness_service.dart):
-  # - image: decodifica/analisi dei frame per il punteggio di parallasse
-  # - sensors_plus: giroscopio, per verificare che il telefono si sia
-  #   davvero mosso fisicamente durante lo scatto ("poor man's AR")
-  # Entrambe pure logica/sensori nativi: zero costi ricorrenti.
+  # Anti-photo-of-a-screen (see lib/services/liveness_service.dart):
+  # - image: frame decoding/analysis for the parallax score
+  # - sensors_plus: gyroscope, to check the phone genuinely moved
+  #   physically during the shot ("poor man's AR")
+  # Both pure logic/native sensors: zero recurring cost.
   image: ^4.2.0
   sensors_plus: ^6.0.1
 
-  # Ricorda se il tutorial iniziale è già stato mostrato
+  # Remembers whether the initial tutorial has already been shown
   shared_preferences: ^2.3.2
 
-  # Font pixel-art in stile GBA
+  # Retro RPG-style fonts
   google_fonts: ^8.2.1
 
-  # Utility
+  # Utilities
   intl: ^0.20.3
   cupertino_icons: ^1.0.8
 

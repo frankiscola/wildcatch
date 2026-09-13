@@ -1,10 +1,10 @@
-// supabase/functions/generate-creature/index.ts
+// supabase/functions/generate-wildkin/index.ts
 //
-// Percorso DIRETTO (nessun doppio avvistamento): tenuto per test
-// manuali da terminale e come riferimento, ma la UI normale ora passa
-// da resolve-sighting (meccanismo 5, doppio avvistamento). Vedi
-// _shared/finalize_capture.ts per la logica vera e propria, condivisa
-// tra le due function.
+// DIRECT path (no double sighting): kept for manual testing from the
+// terminal and as a reference, but the normal UI now goes through
+// resolve-sighting (mechanism 5, double sighting). See
+// _shared/finalize_capture.ts for the actual logic, shared between
+// the two functions.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -15,10 +15,10 @@ import { classifySpecies } from "../_shared/species_classifier.ts";
 interface RequestBody {
   original_photo_url: string;
   context: CaptureContextJson;
-  // Rilevamento on-device (ML Kit, gratuito) già fatto dal client:
-  // se presente, evita del tutto la chiamata a classifySpecies qui
-  // sotto (che invece costa, essendo una chiamata a un modello di
-  // visione). Vedi discussione sui costi nel README.
+  // On-device detection (ML Kit, free) already done by the client:
+  // if present, it entirely skips the classifySpecies call below
+  // (which costs money, being a call to a vision model). See the
+  // cost discussion in the README.
   species_hint?: string | null;
 }
 
@@ -33,14 +33,14 @@ Deno.serve(async (req: Request) => {
 
     if (!original_photo_url || !context) {
       return jsonResponse(
-        { error: "original_photo_url e context sono obbligatori." },
+        { error: "original_photo_url and context are required." },
         400,
       );
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Utente non autenticato." }, 401);
+      return jsonResponse({ error: "User not authenticated." }, 401);
     }
 
     const supabase = createClient(
@@ -51,13 +51,13 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
-      return jsonResponse({ error: "Token non valido o scaduto." }, 401);
+      return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
     const userId = userData.user.id;
 
-    // Preferisci sempre l'hint gratuito del client. Il fallback a
-    // pagamento scatta solo se il client non ne ha fornito uno (es.
-    // ML Kit non ha riconosciuto nulla con sufficiente confidenza).
+    // Always prefer the client's free hint. The paid fallback only
+    // kicks in if the client didn't provide one (e.g. ML Kit didn't
+    // recognize anything with enough confidence).
     const speciesHint = body.species_hint ?? (await classifySpecies(original_photo_url));
 
     const inserted = await finalizeCapture(supabase, {
@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(inserted, 200);
   } catch (e) {
     console.error("Unhandled error:", e);
-    return jsonResponse({ error: "Errore interno." }, 500);
+    return jsonResponse({ error: "Internal error." }, 500);
   }
 });
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// Snapshot meteo minimale usato dal motore di tipizzazione.
+/// Minimal weather snapshot used by the typing engine.
 class WeatherSnapshot {
   final String condition; // "clear", "cloudy", "rain", "snow", "storm", "fog"
   final double temperatureCelsius;
@@ -16,9 +16,9 @@ class WeatherSnapshot {
   });
 }
 
-/// Recupera il meteo attuale da Open-Meteo, che è gratuito
-/// e non richiede una API key. In alternativa si può passare
-/// a OpenWeatherMap se servono dati più granulari.
+/// Fetches current weather from Open-Meteo, which is free and
+/// requires no API key. OpenWeatherMap is a drop-in alternative if
+/// more granular data is needed.
 class WeatherService {
   Future<WeatherSnapshot> getCurrentWeather(double lat, double lon) async {
     final uri = Uri.parse(
@@ -29,7 +29,7 @@ class WeatherService {
 
     final response = await http.get(uri).timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
-      throw WeatherServiceException('Impossibile leggere il meteo attuale.');
+      throw WeatherServiceException('Could not read the current weather.');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -43,9 +43,9 @@ class WeatherService {
     );
   }
 
-  /// Mappa i codici WMO usati da Open-Meteo in categorie semplici
-  /// da usare nel motore di tipizzazione.
-  /// Riferimento codici: https://open-meteo.com/en/docs
+  /// Maps the WMO codes used by Open-Meteo into the simple
+  /// categories used by the typing engine.
+  /// Code reference: https://open-meteo.com/en/docs
   String _mapWeatherCode(int code) {
     if (code == 0) return 'clear';
     if (code <= 3) return 'cloudy';

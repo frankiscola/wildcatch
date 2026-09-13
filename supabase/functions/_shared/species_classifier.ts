@@ -1,19 +1,19 @@
-// Determina l'animale raffigurato nella foto originale usando la
-// vision dell'API Anthropic (Claude). Il risultato (es. "gatto")
-// diventa species_hint/nickname della creatura, e sarà anche il
-// testo da passare a Ludo.ai in modalità "Generate from References"
-// per la generazione dello sprite vero e proprio.
+// Determines the animal shown in the original photo using the
+// Anthropic API's (Claude's) vision. The result (e.g. "cat") becomes
+// the Wildkin's species_hint/nickname base, and will also be the
+// text passed to Ludo.ai in "Generate from References" mode for the
+// actual sprite generation.
 //
-// Richiede il secret ANTHROPIC_API_KEY impostato sul progetto:
+// Requires the ANTHROPIC_API_KEY secret set on the project:
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-// (oppure dalla dashboard: Edge Functions -> Secrets). Non gestibile
-// da qui: nessuno strumento del connettore Supabase può impostare i
-// secret delle function, va fatto manualmente.
+// (or from the dashboard: Edge Functions -> Secrets). Can't be
+// managed from here: no tool in the Supabase connector can set
+// function secrets, it has to be done manually.
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-// Modello economico e veloce: per un singolo sostantivo non serve
-// altro. Se non disponibile sul tuo account, sostituiscilo con un
-// altro modello Claude che hai abilitato.
+// Cheap and fast model: nothing more is needed for a single noun. If
+// it's not available on your account, swap in another Claude model
+// you have enabled.
 const CLASSIFIER_MODEL = "claude-haiku-4-5-20251001";
 
 function toBase64(bytes: ArrayBuffer): string {
@@ -25,22 +25,22 @@ function toBase64(bytes: ArrayBuffer): string {
   return btoa(binary);
 }
 
-/// Ritorna un sostantivo minuscolo in italiano (es. "gatto", "cane",
-/// "gabbiano"). Fallback su "animale" se la classificazione fallisce
-/// per qualunque motivo: non deve mai bloccare la cattura.
+/// Returns a lowercase English noun (e.g. "cat", "dog", "seagull").
+/// Falls back to "animal" if classification fails for any reason: it
+/// must never block the capture.
 export async function classifySpecies(photoUrl: string): Promise<string> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
     console.warn(
-      "ANTHROPIC_API_KEY non impostata: species_hint resterà generico.",
+      "ANTHROPIC_API_KEY not set: species_hint will stay generic.",
     );
-    return "animale";
+    return "animal";
   }
 
   try {
     const photoResponse = await fetch(photoUrl);
     if (!photoResponse.ok) {
-      throw new Error(`Foto non raggiungibile: ${photoResponse.status}`);
+      throw new Error(`Photo unreachable: ${photoResponse.status}`);
     }
     const contentType = photoResponse.headers.get("content-type") ?? "image/jpeg";
     const bytes = await photoResponse.arrayBuffer();
@@ -67,9 +67,9 @@ export async function classifySpecies(photoUrl: string): Promise<string> {
               {
                 type: "text",
                 text:
-                  "Rispondi con UNA sola parola, in italiano, minuscola: " +
-                  "che animale è raffigurato nella foto? Se non riesci a " +
-                  "identificarlo con certezza, rispondi semplicemente 'animale'.",
+                  "Answer with ONE word only, in English, lowercase: " +
+                  "what animal is shown in the photo? If you can't identify " +
+                  "it with confidence, just answer 'animal'.",
               },
             ],
           },
@@ -78,16 +78,16 @@ export async function classifySpecies(photoUrl: string): Promise<string> {
     });
 
     if (!response.ok) {
-      console.error("Errore Anthropic API:", await response.text());
-      return "animale";
+      console.error("Anthropic API error:", await response.text());
+      return "animal";
     }
 
     const data = await response.json();
-    const text: string = data.content?.[0]?.text ?? "animale";
-    const word = text.trim().toLowerCase().replace(/[^a-zàèéìòù]/g, "");
-    return word || "animale";
+    const text: string = data.content?.[0]?.text ?? "animal";
+    const word = text.trim().toLowerCase().replace(/[^a-z]/g, "");
+    return word || "animal";
   } catch (e) {
-    console.error("classifySpecies fallita:", e);
-    return "animale";
+    console.error("classifySpecies failed:", e);
+    return "animal";
   }
 }

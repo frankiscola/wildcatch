@@ -1,16 +1,16 @@
-/// Categoria di una mossa, come nei giochi originali.
-enum MoveCategory { fisica, speciale, stato }
+/// A move's category, as in the original games.
+enum MoveCategory { physical, special, status }
 
-/// Una mossa che una creatura può conoscere. Le statistiche
-/// (potenza, precisione, PP) rispecchiano il formato classico.
+/// A move a Wildkin can know. The stats (power, accuracy, PP)
+/// mirror the classic format.
 class Move {
   final String name;
   final String type;
   final MoveCategory category;
-  final int power; // 0 per le mosse di stato
-  final int accuracy; // 0-100 (alcune mosse "che non falliscono mai" usano 100)
+  final int power; // 0 for status moves
+  final int accuracy; // 0-100 (some "never miss" moves use 100)
   final int maxPp;
-  final int tier; // 1 = mossa base debole, 2/3 = mosse più forti sbloccate a livelli alti
+  final int tier; // 1 = weak starting move, 2/3 = stronger moves unlocked at higher levels
 
   const Move({
     required this.name,
@@ -43,8 +43,8 @@ class Move {
       );
 }
 
-/// Una mossa così come la possiede una creatura: riferimento alla
-/// mossa base + PP correnti (consumati con l'uso in battaglia).
+/// A move as owned by a Wildkin: a reference to the base move +
+/// current PP (consumed by use in battle).
 class LearnedMove {
   final Move move;
   final int currentPp;

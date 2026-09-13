@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/pixel_button.dart';
 import 'capture_screen.dart';
-import 'pokedex_screen.dart';
+import 'field_journal_screen.dart';
 import 'help_screen.dart';
 import 'tutorial_screen.dart';
 
@@ -21,7 +21,7 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            tooltip: 'Aiuto',
+            tooltip: 'Help',
             icon: const Icon(Icons.help_outline),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const HelpScreen()),
@@ -40,7 +40,7 @@ class HomeScreen extends StatelessWidget {
                 _TitleLockup(),
                 const SizedBox(height: 56),
                 PixelButton(
-                  label: 'NUOVA CATTURA',
+                  label: 'NEW CAPTURE',
                   icon: Icons.camera_alt,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const CaptureScreen()),
@@ -48,18 +48,18 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 PixelButton(
-                  label: 'IL MIO POKEDEX',
+                  label: 'MY FIELD JOURNAL',
                   icon: Icons.menu_book,
-                  background: AppColors.sapphireBlue,
+                  background: AppColors.tidalBlue,
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PokedexScreen()),
+                    MaterialPageRoute(builder: (_) => const FieldJournalScreen()),
                   ),
                 ),
                 const SizedBox(height: 18),
                 TextButton.icon(
                   icon: const Icon(Icons.play_circle_outline, color: AppColors.panelBrown),
                   label: Text(
-                    'Come funziona?',
+                    'How does it work?',
                     style: AppFonts.body(color: AppColors.panelBrown, fontSize: 15),
                   ),
                   onPressed: () => Navigator.of(context).push(
@@ -99,20 +99,20 @@ class _TitleLockup extends StatelessWidget {
                 'WILDKIN',
                 style: AppFonts.pixelTitle(
                   fontSize: 22,
-                  color: AppColors.rubyRed,
+                  color: AppColors.emberRed,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 'edition',
-                style: AppFonts.body(fontSize: 18, color: AppColors.sapphireBlue),
+                style: AppFonts.body(fontSize: 18, color: AppColors.tidalBlue),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
         Text(
-          'Fotografa un animale.\nScopri la creatura che nasconde.',
+          'Photograph an animal.\nDiscover the Wildkin hiding within.',
           textAlign: TextAlign.center,
           style: AppFonts.body(fontSize: 18, color: AppColors.panelBrown),
         ),

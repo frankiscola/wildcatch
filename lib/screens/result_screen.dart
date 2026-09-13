@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../models/move.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -10,9 +10,9 @@ import '../widgets/type_badge.dart';
 import 'home_screen.dart';
 
 class ResultScreen extends StatefulWidget {
-  final Creature creature;
+  final Wildkin wildkin;
 
-  const ResultScreen({super.key, required this.creature});
+  const ResultScreen({super.key, required this.wildkin});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -23,11 +23,11 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final creature = widget.creature;
-    final stats = creature.computeStats();
+    final wildkin = widget.wildkin;
+    final stats = wildkin.computeStats();
 
     return Scaffold(
-      appBar: AppBar(title: Text(creature.nickname.toUpperCase())),
+      appBar: AppBar(title: Text(wildkin.nickname.toUpperCase())),
       body: RouteBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -35,11 +35,11 @@ class _ResultScreenState extends State<ResultScreen> {
             child: Column(
               children: [
                 GbaDialogBox(
-                  text: 'Congratulazioni! Hai catturato una nuova creatura!',
+                  text: 'Congratulations! You caught a new Wildkin!',
                   fontSize: 15,
                 ),
                 const SizedBox(height: 16),
-                _SpriteStage(creature: creature, showFront: _showFront),
+                _SpriteStage(wildkin: wildkin, showFront: _showFront),
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: () => setState(() => _showFront = !_showFront),
@@ -49,23 +49,23 @@ class _ResultScreenState extends State<ResultScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _LevelBadge(level: creature.level),
+                    _LevelBadge(level: wildkin.level),
                     const SizedBox(width: 10),
-                    TypeBadgeRow(types: creature.types),
+                    TypeBadgeRow(types: wildkin.types),
                   ],
                 ),
                 const SizedBox(height: 14),
-                _EvolutionCard(creature: creature),
+                _EvolutionCard(wildkin: wildkin),
                 const SizedBox(height: 14),
                 _StatsCard(stats: stats),
                 const SizedBox(height: 14),
-                _MovesCard(moves: creature.moves.map((m) => m.move).toList()),
+                _MovesCard(moves: wildkin.moves.map((m) => m.move).toList()),
                 const SizedBox(height: 14),
-                _ContextSummary(creature: creature),
+                _ContextSummary(wildkin: wildkin),
                 const SizedBox(height: 20),
                 PixelButton(
-                  label: 'TORNA AL MENU',
-                  background: AppColors.sapphireBlue,
+                  label: 'BACK TO MENU',
+                  background: AppColors.tidalBlue,
                   onPressed: () => Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
@@ -81,14 +81,14 @@ class _ResultScreenState extends State<ResultScreen> {
 }
 
 class _SpriteStage extends StatelessWidget {
-  final Creature creature;
+  final Wildkin wildkin;
   final bool showFront;
 
-  const _SpriteStage({required this.creature, required this.showFront});
+  const _SpriteStage({required this.wildkin, required this.showFront});
 
   @override
   Widget build(BuildContext context) {
-    final spriteUrl = showFront ? creature.frontSpriteUrl : creature.backSpriteUrl;
+    final spriteUrl = showFront ? wildkin.frontSpriteUrl : wildkin.backSpriteUrl;
 
     return Container(
       width: double.infinity,
@@ -137,7 +137,7 @@ class _FlipHint extends StatelessWidget {
           Icon(Icons.flip, size: 16, color: AppColors.panelBrown),
           const SizedBox(width: 8),
           Text(
-            showFront ? 'VISTA BATTAGLIA (RETRO)' : 'VISTA POKEDEX (FRONTE)',
+            showFront ? 'BATTLE VIEW (BACK)' : 'JOURNAL VIEW (FRONT)',
             style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.panelBrown),
           ),
         ],
@@ -169,35 +169,35 @@ class _LevelBadge extends StatelessWidget {
   }
 }
 
-/// Mostra numero di stadi della linea evolutiva e l'indizio
-/// qualitativo sulla prossima evoluzione, senza mai rivelare il
-/// livello esatto.
+/// Shows the number of stages in the evolutionary line and the
+/// qualitative hint about the next evolution, without ever revealing
+/// the exact level.
 class _EvolutionCard extends StatelessWidget {
-  final Creature creature;
-  const _EvolutionCard({required this.creature});
+  final Wildkin wildkin;
+  const _EvolutionCard({required this.wildkin});
 
   @override
   Widget build(BuildContext context) {
-    final plan = creature.evolutionPlan;
+    final plan = wildkin.evolutionPlan;
     final lineLabel = plan.totalStages == 3
-        ? 'Linea evolutiva a 3 stadi (2 evoluzioni possibili)'
-        : 'Linea evolutiva a 2 stadi (1 evoluzione possibile)';
+        ? '3-stage evolutionary line (2 possible evolutions)'
+        : '2-stage evolutionary line (1 possible evolution)';
 
     return _Panel(
-      title: 'EVOLUZIONE',
+      title: 'EVOLUTION',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(lineLabel, style: AppFonts.body(fontSize: 16)),
           const SizedBox(height: 4),
           Text(
-            'Stadio attuale: ${plan.currentStage}/${plan.totalStages}',
+            'Current stage: ${plan.currentStage}/${plan.totalStages}',
             style: AppFonts.body(fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
             plan.timingLabel(),
-            style: AppFonts.body(fontSize: 16, color: AppColors.rubyRed),
+            style: AppFonts.body(fontSize: 16, color: AppColors.emberRed),
           ),
         ],
       ),
@@ -212,15 +212,15 @@ class _StatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Panel(
-      title: 'STATISTICHE',
+      title: 'STATS',
       child: Column(
         children: [
-          _StatBar(label: 'PS', value: stats.maxHp, max: 260, color: AppColors.grassGreen),
-          _StatBar(label: 'ATT', value: stats.attack, max: 200, color: AppColors.rubyRed),
-          _StatBar(label: 'DIF', value: stats.defense, max: 200, color: AppColors.sapphireBlue),
-          _StatBar(label: 'ATT SP', value: stats.spAttack, max: 200, color: const Color(0xFF9C6ADE)),
-          _StatBar(label: 'DIF SP', value: stats.spDefense, max: 200, color: const Color(0xFF4FA8A0)),
-          _StatBar(label: 'VEL', value: stats.speed, max: 200, color: const Color(0xFFE0A62B)),
+          _StatBar(label: 'HP', value: stats.maxHp, max: 260, color: AppColors.grassGreen),
+          _StatBar(label: 'ATK', value: stats.attack, max: 200, color: AppColors.emberRed),
+          _StatBar(label: 'DEF', value: stats.defense, max: 200, color: AppColors.tidalBlue),
+          _StatBar(label: 'INSIGHT', value: stats.insight, max: 200, color: const Color(0xFF9C6ADE)),
+          _StatBar(label: 'WARD', value: stats.ward, max: 200, color: const Color(0xFF4FA8A0)),
+          _StatBar(label: 'SPEED', value: stats.speed, max: 200, color: const Color(0xFFE0A62B)),
         ],
       ),
     );
@@ -287,7 +287,7 @@ class _MovesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Panel(
-      title: 'MOSSE',
+      title: 'MOVES',
       child: Column(
         children: moves
             .map((m) => Padding(
@@ -306,9 +306,9 @@ class _MovesCard extends StatelessWidget {
                       Expanded(
                         flex: 3,
                         child: Text(
-                          m.category == MoveCategory.stato
+                          m.category == MoveCategory.status
                               ? 'PP ${m.maxPp}'
-                              : 'Pot ${m.power} · Prec ${m.accuracy}% · PP ${m.maxPp}',
+                              : 'Pow ${m.power} · Acc ${m.accuracy}% · PP ${m.maxPp}',
                           textAlign: TextAlign.right,
                           style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
                         ),
@@ -323,17 +323,17 @@ class _MovesCard extends StatelessWidget {
 }
 
 class _ContextSummary extends StatelessWidget {
-  final Creature creature;
-  const _ContextSummary({required this.creature});
+  final Wildkin wildkin;
+  const _ContextSummary({required this.wildkin});
 
   @override
   Widget build(BuildContext context) {
-    final ctx = creature.captureContext;
+    final ctx = wildkin.captureContext;
     final chips = <String>[
       '${ctx.temperatureCelsius.round()}°C',
       ctx.weatherCondition,
       ctx.season,
-      ctx.isNightTime ? 'notte' : 'giorno',
+      ctx.isNightTime ? 'night' : 'day',
     ];
 
     return Wrap(
@@ -357,7 +357,7 @@ class _ContextSummary extends StatelessWidget {
   }
 }
 
-/// Riquadro generico arrotondato, riusato da stats/mosse/evoluzione.
+/// Generic rounded panel, reused by stats/moves/evolution.
 class _Panel extends StatelessWidget {
   final String title;
   final Widget child;
@@ -379,7 +379,7 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppFonts.pixelTitle(fontSize: 11, color: AppColors.rubyRed)),
+          Text(title, style: AppFonts.pixelTitle(fontSize: 11, color: AppColors.emberRed)),
           const SizedBox(height: 10),
           child,
         ],

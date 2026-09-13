@@ -1,37 +1,32 @@
 import 'dart:math';
 import '../models/stats.dart';
 
-/// Genera le statistiche base di una creatura alla cattura.
+/// Generates a Wildkin's base stats at capture time.
 ///
-/// Le stat base restano fisse per tutta la vita della creatura
-/// (fanno da "IV impliciti"): quelle effettive a un certo livello
-/// si calcolano con [Creature.computeStats].
+/// Base stats stay fixed for the Wildkin's whole life (they act as
+/// an "implicit Potential Score"): the effective values at a given
+/// level are computed by [Wildkin.computeStats].
 ///
-/// Ogni tipo ha un piccolo bonus tematico (es. roccia -> più difesa,
-/// elettro -> più velocità) sommato a una base casuale, così due
-/// creature con lo stesso tipo non sono mai identiche.
+/// Each type has a small thematic bonus (e.g. rock -> more defense,
+/// electric -> more speed) added on top of a random baseline, so two
+/// Wildkin of the same type are never identical.
 class StatsEngine {
   final Random _random;
 
   StatsEngine({Random? random}) : _random = random ?? Random();
 
   static const Map<String, Map<String, int>> _typeBias = {
-    'fuoco': {'attack': 6, 'spAttack': 6, 'speed': 3},
-    'acqua': {'defense': 4, 'spDefense': 5, 'hp': 3},
-    'erba': {'spAttack': 4, 'spDefense': 4, 'hp': 3},
-    'elettro': {'speed': 8, 'spAttack': 4},
-    'ghiaccio': {'spDefense': 5, 'defense': 3},
-    'lotta': {'attack': 8, 'hp': 4},
-    'veleno': {'spAttack': 3, 'speed': 2},
-    'terra': {'attack': 5, 'defense': 5},
-    'volante': {'speed': 7, 'spAttack': 3},
-    'psico': {'spAttack': 8, 'spDefense': 3},
-    'roccia': {'defense': 9, 'hp': 3},
-    'spettro': {'spAttack': 5, 'spDefense': 5},
-    'drago': {'attack': 6, 'spAttack': 6, 'hp': 3},
-    'buio': {'attack': 5, 'speed': 5},
-    'acciaio': {'defense': 9, 'spDefense': 4},
-    'normale': {'hp': 5},
+    'fire': {'attack': 6, 'insight': 6, 'speed': 3},
+    'water': {'defense': 4, 'ward': 5, 'hp': 3},
+    'grass': {'insight': 4, 'ward': 4, 'hp': 3},
+    'electric': {'speed': 8, 'insight': 4},
+    'ice': {'ward': 5, 'defense': 3},
+    'poison': {'insight': 3, 'speed': 2},
+    'ground': {'attack': 5, 'defense': 5},
+    'flying': {'speed': 7, 'insight': 3},
+    'psychic': {'insight': 8, 'ward': 3},
+    'rock': {'defense': 9, 'hp': 3},
+    'dark': {'attack': 5, 'speed': 5},
   };
 
   BaseStats generate(List<String> types) {
@@ -39,8 +34,8 @@ class StatsEngine {
       'hp': 20 + _random.nextInt(15),
       'attack': 15 + _random.nextInt(15),
       'defense': 15 + _random.nextInt(15),
-      'spAttack': 15 + _random.nextInt(15),
-      'spDefense': 15 + _random.nextInt(15),
+      'insight': 15 + _random.nextInt(15),
+      'ward': 15 + _random.nextInt(15),
       'speed': 15 + _random.nextInt(15),
     };
 
@@ -56,23 +51,23 @@ class StatsEngine {
       hp: values['hp']!,
       attack: values['attack']!,
       defense: values['defense']!,
-      spAttack: values['spAttack']!,
-      spDefense: values['spDefense']!,
+      insight: values['insight']!,
+      ward: values['ward']!,
       speed: values['speed']!,
     );
   }
 
-  /// Alla prima evoluzione le stat base aumentano un po' (come
-  /// accade cambiando "specie" nei giochi originali): +10-20% su
-  /// ogni valore, arrotondato.
+  /// At the first evolution, base stats increase a bit (as happens
+  /// when "species" changes in the classic games): +10-20% on each
+  /// value, rounded.
   BaseStats boostForEvolution(BaseStats current) {
     int boosted(int v) => (v * (1.1 + _random.nextDouble() * 0.1)).round();
     return BaseStats(
       hp: boosted(current.hp),
       attack: boosted(current.attack),
       defense: boosted(current.defense),
-      spAttack: boosted(current.spAttack),
-      spDefense: boosted(current.spDefense),
+      insight: boosted(current.insight),
+      ward: boosted(current.ward),
       speed: boosted(current.speed),
     );
   }

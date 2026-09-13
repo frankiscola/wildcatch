@@ -1,8 +1,9 @@
-// Porting 1:1 di lib/services/typing_engine.dart.
-// Riceve il CaptureContext così come lo serializza il client Flutter
-// (CaptureContext.toJson(), chiavi snake_case), quindi season,
-// is_night_time e biome arrivano già calcolati — non li ricalcoliamo
-// qui per evitare di duplicare la logica di data/ora due volte.
+// 1:1 port of lib/services/typing_engine.dart.
+// Receives the CaptureContext exactly as the Flutter client
+// serializes it (CaptureContext.toJson(), snake_case keys), so
+// season, is_night_time, and biome arrive already computed — we
+// don't recompute them here to avoid duplicating the date/time logic
+// in two places.
 
 export interface CaptureContextJson {
   captured_at: string;
@@ -20,17 +21,17 @@ export interface CaptureContextJson {
 
 function baseScores(): Record<string, number> {
   return {
-    fuoco: 3,
-    acqua: 3,
-    elettro: 3,
-    erba: 3,
-    ghiaccio: 2,
-    veleno: 2,
-    terra: 3,
-    volante: 3,
-    psico: 2,
-    roccia: 3,
-    buio: 2,
+    fire: 3,
+    water: 3,
+    electric: 3,
+    grass: 3,
+    ice: 2,
+    poison: 2,
+    ground: 3,
+    flying: 3,
+    psychic: 2,
+    rock: 3,
+    dark: 2,
   };
 }
 
@@ -40,94 +41,94 @@ function add(scores: Record<string, number>, type: string, amount: number) {
 
 function applyTemperature(scores: Record<string, number>, celsius: number) {
   if (celsius >= 30) {
-    add(scores, "fuoco", 6);
-    add(scores, "terra", 3);
+    add(scores, "fire", 6);
+    add(scores, "ground", 3);
   } else if (celsius >= 22) {
-    add(scores, "erba", 3);
+    add(scores, "grass", 3);
   } else if (celsius <= 5) {
-    add(scores, "ghiaccio", 6);
+    add(scores, "ice", 6);
   } else if (celsius <= 12) {
-    add(scores, "ghiaccio", 2);
+    add(scores, "ice", 2);
   }
 }
 
 function applyWeather(scores: Record<string, number>, condition: string) {
   switch (condition) {
     case "rain":
-      add(scores, "acqua", 6);
+      add(scores, "water", 6);
       break;
     case "storm":
-      add(scores, "elettro", 7);
-      add(scores, "volante", 2);
+      add(scores, "electric", 7);
+      add(scores, "flying", 2);
       break;
     case "snow":
-      add(scores, "ghiaccio", 7);
+      add(scores, "ice", 7);
       break;
     case "fog":
-      add(scores, "psico", 4);
-      add(scores, "veleno", 3);
+      add(scores, "psychic", 4);
+      add(scores, "poison", 3);
       break;
     case "clear":
-      add(scores, "fuoco", 1);
-      add(scores, "volante", 2);
+      add(scores, "fire", 1);
+      add(scores, "flying", 2);
       break;
   }
 }
 
 function applySeason(scores: Record<string, number>, season: string) {
   switch (season) {
-    case "estate":
-      add(scores, "fuoco", 2);
-      add(scores, "terra", 1);
+    case "summer":
+      add(scores, "fire", 2);
+      add(scores, "ground", 1);
       break;
-    case "inverno":
-      add(scores, "ghiaccio", 2);
+    case "winter":
+      add(scores, "ice", 2);
       break;
-    case "primavera":
-      add(scores, "erba", 3);
+    case "spring":
+      add(scores, "grass", 3);
       break;
-    case "autunno":
-      add(scores, "terra", 2);
-      add(scores, "buio", 1);
+    case "fall":
+      add(scores, "ground", 2);
+      add(scores, "dark", 1);
       break;
   }
 }
 
 function applyBiome(scores: Record<string, number>, biome: string) {
   switch (biome) {
-    case "mare":
-      add(scores, "acqua", 8);
+    case "sea":
+      add(scores, "water", 8);
       break;
-    case "montagna":
-      add(scores, "roccia", 8);
-      add(scores, "terra", 3);
+    case "mountain":
+      add(scores, "rock", 8);
+      add(scores, "ground", 3);
       break;
-    case "foresta":
-      add(scores, "erba", 6);
+    case "forest":
+      add(scores, "grass", 6);
       break;
-    case "cittaUrbana":
-      add(scores, "elettro", 5);
-      add(scores, "roccia", 3);
+    case "urbanCity":
+      add(scores, "electric", 5);
+      add(scores, "rock", 3);
       break;
-    case "pianura":
-      add(scores, "erba", 4);
-      add(scores, "terra", 2);
+    case "plain":
+      add(scores, "grass", 4);
+      add(scores, "ground", 2);
       break;
-    case "deserto":
-      add(scores, "terra", 7);
-      add(scores, "fuoco", 2);
+    case "desert":
+      add(scores, "ground", 7);
+      add(scores, "fire", 2);
       break;
     default:
-      break; // 'sconosciuto'
+      break; // 'unknown'
   }
 }
 
 function applyTimeOfDay(scores: Record<string, number>, isNight: boolean) {
   if (isNight) {
-    add(scores, "buio", 6);
-    add(scores, "psico", 4);
+    add(scores, "dark", 6);
+    add(scores, "psychic", 4);
   } else {
-    add(scores, "volante", 1);
+    add(scores, "flying", 1);
   }
 }
 
@@ -142,11 +143,11 @@ function weightedPick(scores: Record<string, number>): string {
   return entries[0][0];
 }
 
-/// Assegna 1 o 2 tipi in base al contesto, con la stessa logica
-/// pesata usata in typing_engine.dart (~35% di probabilità di
-/// doppio tipo quando questa funzione viene usata per l'evoluzione;
-/// generate-creature usa solo il primo elemento perché alla cattura
-/// la creatura ha sempre un tipo solo).
+/// Assigns 1 or 2 types based on the context, using the same
+/// weighted logic as typing_engine.dart (~35% chance of a dual type
+/// when this function is used for evolution; generate-wildkin only
+/// uses the first element, since at capture the Wildkin always has
+/// just one type).
 export function assignTypes(context: CaptureContextJson): string[] {
   const scores = baseScores();
 

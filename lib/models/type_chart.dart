@@ -8,60 +8,60 @@
 /// If an attacking type doesn't appear in any of the three lists, the
 /// multiplier is 1x (no effect).
 ///
-/// NOTE: if a creature has two types, the multipliers from both types
+/// NOTE: if a Wildkin has two types, the multipliers from both types
 /// are multiplied together (exactly like in the original games): a
 /// Water move against a Fire/Rock target deals 2x * 2x = 4x damage.
 class TypeChart {
   static const List<String> orderedTypes = [
-    'fuoco', 'acqua', 'elettro', 'erba', 'ghiaccio', 'veleno',
-    'terra', 'volante', 'psico', 'roccia', 'buio',
+    'fire', 'water', 'electric', 'grass', 'ice', 'poison',
+    'ground', 'flying', 'psychic', 'rock', 'dark',
   ];
 
   static const Map<String, _TypeMatchups> _chart = {
-    'fuoco': _TypeMatchups(
-      weakTo: {'acqua', 'terra', 'roccia'},
-      resists: {'fuoco', 'erba', 'ghiaccio'},
+    'fire': _TypeMatchups(
+      weakTo: {'water', 'ground', 'rock'},
+      resists: {'fire', 'grass', 'ice'},
     ),
-    'acqua': _TypeMatchups(
-      weakTo: {'elettro', 'erba', 'ghiaccio'},
-      resists: {'fuoco', 'acqua'},
+    'water': _TypeMatchups(
+      weakTo: {'electric', 'grass', 'ice'},
+      resists: {'fire', 'water'},
     ),
-    'elettro': _TypeMatchups(
-      weakTo: {'terra'},
-      resists: {'elettro', 'volante'},
+    'electric': _TypeMatchups(
+      weakTo: {'ground'},
+      resists: {'electric', 'flying'},
     ),
-    'erba': _TypeMatchups(
-      weakTo: {'fuoco', 'veleno', 'volante'},
-      resists: {'acqua', 'elettro', 'erba', 'terra'},
+    'grass': _TypeMatchups(
+      weakTo: {'fire', 'poison', 'flying'},
+      resists: {'water', 'electric', 'grass', 'ground'},
     ),
-    'ghiaccio': _TypeMatchups(
-      weakTo: {'fuoco', 'volante'},
-      resists: {'ghiaccio'},
+    'ice': _TypeMatchups(
+      weakTo: {'fire', 'flying'},
+      resists: {'ice'},
     ),
-    'veleno': _TypeMatchups(
-      weakTo: {'terra', 'psico'},
-      resists: {'erba', 'veleno', 'roccia'},
+    'poison': _TypeMatchups(
+      weakTo: {'ground', 'psychic'},
+      resists: {'grass', 'poison', 'rock'},
     ),
-    'terra': _TypeMatchups(
-      weakTo: {'acqua', 'erba', 'ghiaccio'},
-      resists: {'veleno', 'roccia'},
-      immuneTo: {'elettro'},
+    'ground': _TypeMatchups(
+      weakTo: {'water', 'grass', 'ice'},
+      resists: {'poison', 'rock'},
+      immuneTo: {'electric'},
     ),
-    'volante': _TypeMatchups(
-      weakTo: {'elettro', 'ghiaccio'},
-      immuneTo: {'terra'},
+    'flying': _TypeMatchups(
+      weakTo: {'electric', 'ice'},
+      immuneTo: {'ground'},
     ),
-    'psico': _TypeMatchups(
-      weakTo: {'buio', 'fuoco'},
-      resists: {'psico', 'terra'},
+    'psychic': _TypeMatchups(
+      weakTo: {'dark', 'fire'},
+      resists: {'psychic', 'ground'},
     ),
-    'roccia': _TypeMatchups(
-      weakTo: {'acqua', 'erba'},
-      resists: {'fuoco', 'volante'},
+    'rock': _TypeMatchups(
+      weakTo: {'water', 'grass'},
+      resists: {'fire', 'flying'},
     ),
-    'buio': _TypeMatchups(
-      weakTo: {'psico'},
-      resists: {'buio'},
+    'dark': _TypeMatchups(
+      weakTo: {'psychic'},
+      resists: {'dark'},
     ),
   };
 

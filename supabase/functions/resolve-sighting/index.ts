@@ -1,24 +1,25 @@
 // supabase/functions/resolve-sighting/index.ts
 //
-// Meccanismo 5 del piano anti-cattura-da-internet: doppio
-// avvistamento. Gestisce due azioni, richiamate rispettivamente da
-// SupabaseService.recordSighting e SupabaseService.confirmSighting:
+// Mechanism 5 of the anti-photo-of-a-screen plan: double sighting.
+// Handles two actions, called respectively from
+// SupabaseService.recordSighting and SupabaseService.confirmSighting:
 //
-//  action: "record"  → primo scatto. Calcola l'hash percettivo della
-//                       foto, controlla che non combaci in modo
-//                       sospetto con foto di ALTRI utenti, salva un
-//                       avvistamento "pending" con una scadenza.
+//  action: "record"  → first shot. Computes the photo's perceptual
+//                       hash, checks it doesn't suspiciously match
+//                       photos from OTHER users, saves a "pending"
+//                       sighting with an expiration.
 //
-//  action: "confirm" → secondo scatto, entro la finestra temporale
-//                       (meccanismo 4). Verifica che sia plausibile
-//                       trattarsi dello stesso animale rivisto poco
-//                       dopo (vicinanza GPS, specie coerente,
-//                       immagine simile-ma-non-identica alla prima),
-//                       poi chiama finalizeCapture() e restituisce la
-//                       creatura come farebbe generate-creature.
+//  action: "confirm" → second shot, within the time window
+//                       (mechanism 4). Checks it's plausible that
+//                       this is the same animal seen again shortly
+//                       after (GPS proximity, consistent species,
+//                       an image similar-but-not-identical to the
+//                       first), then calls finalizeCapture() and
+//                       returns the Wildkin just like generate-wildkin
+//                       would.
 //
-// In caso di rifiuto risponde con status 409 e { reason: "..." },
-// codici che il client mappa in SightingRejectionReason.
+// On rejection it responds with status 409 and { reason: "..." },
+// codes the client maps to SightingRejectionReason.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -26,14 +27,14 @@ import type { CaptureContextJson } from "../_shared/typing_engine.ts";
 import { finalizeCapture } from "../_shared/finalize_capture.ts";
 import { computeAverageHash, hammingDistance } from "../_shared/phash.ts";
 
-// ── Soglie, tutte da ricalibrare con dati reali di utilizzo ──
+// ── Thresholds, all to be recalibrated with real usage data ──
 const SIGHTING_WINDOW_MINUTES = 20;
 const MAX_DISTANCE_METERS = 300;
-// Hash a 64 bit: distanza 0-2 = praticamente la stessa immagine.
+// 64-bit hash: distance 0-2 = practically the same image.
 const SAME_IMAGE_MAX_DISTANCE = 3;
-// Oltre questa soglia due foto sono considerate "chiaramente diverse
-// soggetti/momenti"; sotto, e appartenenti a un ALTRO utente, sono
-// trattate come sospetto duplicato preso da internet.
+// Above this threshold two photos are considered "clearly different
+// subjects/moments"; below it, and belonging to ANOTHER user, they're
+// treated as a suspicious duplicate taken from the internet.
 const CROSS_USER_DUPLICATE_MAX_DISTANCE = 6;
 
 interface RequestBody {
@@ -55,14 +56,14 @@ Deno.serve(async (req: Request) => {
 
     if (!action || !original_photo_url || !context) {
       return jsonResponse(
-        { error: "action, original_photo_url e context sono obbligatori." },
+        { error: "action, original_photo_url, and context are required." },
         400,
       );
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Utente non autenticato." }, 401);
+      return jsonResponse({ error: "User not authenticated." }, 401);
     }
 
     const supabase = createClient(
@@ -73,7 +74,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
-      return jsonResponse({ error: "Token non valido o scaduto." }, 401);
+      return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
     const userId = userData.user.id;
 
@@ -83,7 +84,7 @@ Deno.serve(async (req: Request) => {
     return await handleConfirm(supabase, userId, body);
   } catch (e) {
     console.error("Unhandled error:", e);
-    return jsonResponse({ error: "Errore interno." }, 500);
+    return jsonResponse({ error: "Internal error." }, 500);
   }
 });
 
@@ -118,7 +119,7 @@ async function handleRecord(
 
   if (error) {
     console.error("Insert sighting error:", error);
-    return jsonResponse({ error: "Impossibile registrare l'avvistamento." }, 500);
+    return jsonResponse({ error: "Could not record the sighting." }, 500);
   }
 
   await supabase.from("photo_hashes").insert({
@@ -144,7 +145,7 @@ async function handleConfirm(
   body: RequestBody,
 ): Promise<Response> {
   if (!body.sighting_id) {
-    return jsonResponse({ error: "sighting_id obbligatorio per confirm." }, 400);
+    return jsonResponse({ error: "sighting_id is required for confirm." }, 400);
   }
 
   const { data: sighting, error: fetchError } = await supabase
@@ -155,7 +156,7 @@ async function handleConfirm(
     .single();
 
   if (fetchError || !sighting) {
-    return jsonResponse({ error: "Avvistamento non trovato." }, 404);
+    return jsonResponse({ error: "Sighting not found." }, 404);
   }
 
   if (sighting.status !== "pending") {
@@ -194,9 +195,9 @@ async function handleConfirm(
     return jsonResponse({ reason: "suspicious_duplicate_of_other_user" }, 409);
   }
 
-  // Tutti i controlli superati: finalizza la cattura usando il
-  // contesto di QUESTO secondo scatto (è il momento in cui la
-  // cattura viene effettivamente completata).
+  // All checks passed: finalize the capture using the context of
+  // THIS second shot (that's the moment the capture is actually
+  // completed).
   const inserted = await finalizeCapture(supabase, {
     userId,
     originalPhotoUrl: body.original_photo_url,
@@ -218,19 +219,20 @@ async function handleConfirm(
   return jsonResponse(inserted, 200);
 }
 
-/// Cerca, tra le foto già viste da ALTRI utenti, un hash troppo
-/// simile a quello passato. Non guarda le proprie foto: qui interessa
-/// solo il caso "immagine presa da internet e già usata da qualcun
-/// altro", non il confronto tra i due scatti dello stesso
-/// avvistamento (quello lo fa handleConfirm separatamente).
+/// Looks, among photos already seen from OTHER users, for a hash too
+/// similar to the one passed in. Doesn't look at the user's own
+/// photos: this is only concerned with the "image taken from the
+/// internet and already used by someone else" case, not the
+/// comparison between the two shots of the same sighting (handleConfirm
+/// does that separately).
 async function findCrossUserDuplicate(
   supabase: SupabaseClient,
   userId: string,
   ahash: string,
 ): Promise<boolean> {
-  // Vedi nota sulla scalabilità in 0002_anti_spoof.sql: per un'app
-  // hobby va benissimo confrontare con un batch recente invece che
-  // con lo storico completo.
+  // See the scalability note in 0002_anti_spoof.sql: for a hobby app
+  // it's perfectly fine to compare against a recent batch instead of
+  // the full history.
   const { data: rows, error } = await supabase
     .from("photo_hashes")
     .select("ahash, user_id")
@@ -248,7 +250,7 @@ function normalizeSpecies(hint: string | null | undefined): string | null {
   return hint.trim().toLowerCase();
 }
 
-/// Distanza in metri tra due coordinate GPS (formula dell'emisenoverso).
+/// Distance in meters between two GPS coordinates (haversine formula).
 function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6_371_000;
   const toRad = (deg: number) => (deg * Math.PI) / 180;

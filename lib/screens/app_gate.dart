@@ -4,11 +4,11 @@ import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'tutorial_screen.dart';
 
-/// Primo widget mostrato all'avvio: controlla se il tutorial è già
-/// stato visto (persistito con shared_preferences) e decide se
-/// mostrarlo o andare dritto alla home. Il controllo è quasi
-/// istantaneo, ma essendo comunque asincrono serve un piccolo stato
-/// di caricamento per evitare un frame vuoto.
+/// First widget shown at startup: checks whether the tutorial has
+/// already been seen (persisted with shared_preferences) and decides
+/// whether to show it or go straight to the home screen. The check
+/// is nearly instant, but since it's still async a small loading
+/// state is needed to avoid an empty frame.
 class AppGate extends StatefulWidget {
   const AppGate({super.key});
 

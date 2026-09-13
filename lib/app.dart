@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'screens/app_gate.dart';
 
-class WildcatchApp extends StatelessWidget {
-  const WildcatchApp({super.key});
+class WildkinApp extends StatelessWidget {
+  const WildkinApp({super.key});
 
   @override
   Widget build(BuildContext context) {

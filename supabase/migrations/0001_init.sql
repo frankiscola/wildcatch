@@ -1,10 +1,10 @@
--- Schema iniziale per Wildcatch.
--- Applicare con: supabase db push (dopo `supabase link`).
+-- Initial schema for Wildkin.
+-- Apply with: supabase db push (after `supabase link`).
 
 create extension if not exists pgcrypto;
 
 -- ─────────────────────────────────────────────────────────────
--- Tabella principale: le creature catturate da ciascun utente.
+-- Main table: the Wildkin captured by each user.
 -- ─────────────────────────────────────────────────────────────
 create table if not exists captures (
   id uuid primary key default gen_random_uuid(),
@@ -21,7 +21,7 @@ create table if not exists captures (
   current_exp int not null default 0,
   current_hp int not null,
 
-  base_stats jsonb not null,       -- {hp, attack, defense, sp_attack, sp_defense, speed}
+  base_stats jsonb not null,       -- {hp, attack, defense, insight, ward, speed}
   moves jsonb not null,            -- [{move: {...}, current_pp}, ...]
   evolution_plan jsonb not null,   -- {total_stages, current_stage, next_evolution_level, second_evolution_level}
 
@@ -34,7 +34,7 @@ create table if not exists captures (
   humidity_percent double precision,
   wind_speed_kmh double precision,
 
-  -- valorizzato solo dopo la prima evoluzione
+  -- only set after the first evolution
   evolution_context jsonb,
 
   created_at timestamptz not null default now()
@@ -43,12 +43,12 @@ create table if not exists captures (
 create index if not exists captures_user_id_idx on captures (user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- Log delle battaglie (cattura riuscita/fallita, KO, ecc).
+-- Battle logs (successful/failed capture, fainting, etc).
 -- ─────────────────────────────────────────────────────────────
 create table if not exists battle_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
-  creature_id uuid references captures not null,
+  creature_id uuid references captures not null, -- NOTE: kept as 'creature_id' to match the already-deployed schema; a future migration could rename it to 'wildkin_id'
   wild_snapshot jsonb not null,
   outcome text not null,           -- 'caught' | 'fled' | 'fainted_own'
   created_at timestamptz not null default now()
@@ -57,7 +57,7 @@ create table if not exists battle_logs (
 create index if not exists battle_logs_user_id_idx on battle_logs (user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- Row Level Security: ogni utente vede e scrive solo i propri dati.
+-- Row Level Security: every user can only see and write their own data.
 -- ─────────────────────────────────────────────────────────────
 alter table captures enable row level security;
 alter table battle_logs enable row level security;
@@ -78,10 +78,10 @@ create policy "battle_logs_insert_own" on battle_logs
   for insert with check (auth.uid() = user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- Bucket di storage per le foto originali e (in futuro) le sprite.
--- Pubblico in lettura per semplicità di MVP: chiunque abbia l'URL
--- può vedere l'immagine, ma solo il proprietario può caricarla,
--- perché il path atteso è "<user_id>/<timestamp>.jpg" (vedi
+-- Storage bucket for the original photos and (in the future) the
+-- sprites. Publicly readable for MVP simplicity: anyone with the URL
+-- can view the image, but only the owner can upload it, because the
+-- expected path is "<user_id>/<timestamp>.jpg" (see
 -- SupabaseService.uploadOriginalPhoto in Flutter).
 -- ─────────────────────────────────────────────────────────────
 insert into storage.buckets (id, name, public)

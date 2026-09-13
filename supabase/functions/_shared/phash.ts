@@ -1,33 +1,32 @@
-// Hash percettivo (average hash, "aHash") usato per due controlli
-// del meccanismo 5 (doppio avvistamento):
+// Perceptual hash (average hash, "aHash") used for two checks in
+// mechanism 5 (double sighting):
 //
-//  1. Confronto TRA le due foto dello stesso utente: se sono
-//     IDENTICHE (o quasi), è quasi certo che l'utente abbia
-//     semplicemente rifotografato la stessa immagine statica invece
-//     di ritrovare davvero l'animale — va rifiutato.
-//  2. Confronto della nuova foto con TUTTE le foto già viste da altri
-//     utenti (tabella globale photo_hashes): se combacia troppo da
-//     vicino con una foto di uno sconosciuto, è quasi certamente
-//     un'immagine presa da internet, non uno scatto dal vivo — va
-//     rifiutato/segnalato.
+//  1. Comparison BETWEEN the same user's two photos: if they're
+//     IDENTICAL (or nearly so), it's almost certain the user simply
+//     re-photographed the same static image instead of genuinely
+//     finding the animal again — reject.
+//  2. Comparison of the new photo against ALL photos already seen
+//     from other users (the global photo_hashes table): if it
+//     matches too closely with a stranger's photo, it's almost
+//     certainly an image taken from the internet, not a live shot —
+//     reject/flag.
 //
-// L'algoritmo (aHash) è deliberatamente semplice: ridimensiona a 8x8
-// in scala di grigi, confronta ogni pixel con la media, produce un
-// hash a 64 bit. Non è robusto quanto pHash/dHash basati su DCT, ma è
-// più che sufficiente per questi due controlli e non richiede
-// dipendenze pesanti.
+// The algorithm (aHash) is deliberately simple: downscale to 8x8
+// grayscale, compare each pixel to the mean, produce a 64-bit hash.
+// It's not as robust as DCT-based pHash/dHash, but it's more than
+// enough for these two checks and needs no heavy dependencies.
 
-// Versione verificata al momento della scrittura di questo file
-// (settembre 2026): controlla comunque su https://deno.land/x/imagescript
-// se ne è uscita una più recente prima del deploy.
+// Version verified at the time this file was written (September
+// 2026): still worth checking https://deno.land/x/imagescript for a
+// newer one before deploying.
 import { Image } from "https://deno.land/x/[email protected]/mod.ts";
 
-/// Calcola l'aHash (64 bit, come stringa esadecimale a 16 caratteri)
-/// di un'immagine scaricata da `photoUrl`.
+/// Computes the aHash (64 bits, as a 16-character hex string) of an
+/// image downloaded from `photoUrl`.
 export async function computeAverageHash(photoUrl: string): Promise<string> {
   const response = await fetch(photoUrl);
   if (!response.ok) {
-    throw new Error(`Foto non raggiungibile per l'hashing: ${response.status}`);
+    throw new Error(`Photo unreachable for hashing: ${response.status}`);
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
 
@@ -50,8 +49,8 @@ export async function computeAverageHash(photoUrl: string): Promise<string> {
     bits += gray >= mean ? "1" : "0";
   }
 
-  // Da stringa binaria a esadecimale, per un campo testuale compatto
-  // da salvare/indicizzare in Postgres.
+  // Binary string to hex, for a compact text field to save/index in
+  // Postgres.
   let hex = "";
   for (let i = 0; i < bits.length; i += 4) {
     hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
@@ -59,13 +58,13 @@ export async function computeAverageHash(photoUrl: string): Promise<string> {
   return hex;
 }
 
-/// Distanza di Hamming tra due hash esadecimali della stessa lunghezza
-/// (numero di bit diversi: 0 = identiche, 64 = completamente opposte).
+/// Hamming distance between two hex hashes of the same length
+/// (number of differing bits: 0 = identical, 64 = fully opposite).
 export function hammingDistance(hexA: string, hexB: string): number {
   if (hexA.length !== hexB.length) {
-    // Non dovrebbe mai succedere se generiamo sempre hash della
-    // stessa lunghezza, ma meglio non far esplodere la function per
-    // un dato corrotto: trattalo come "massimamente diverso".
+    // Should never happen if we always generate hashes of the same
+    // length, but better not to crash the function over corrupted
+    // data: treat it as "maximally different".
     return 64;
   }
 

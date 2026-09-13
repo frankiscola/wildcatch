@@ -1,102 +1,114 @@
-# Wildcatch — scaffold Flutter
+# Wildkin — Flutter scaffold
 
-Scaffold di partenza per l'app: fotografa un animale, ottieni una
-creatura in stile pixel-art (gen 3/4) con sprite fronte/retro, livelli,
-mosse, statistiche ed evoluzioni — il cui tipo dipende da meteo,
-posizione GPS e ora della cattura (e, alla prima evoluzione, anche
-del momento dell'evoluzione stessa).
+Starting scaffold for the app: photograph an animal, get back a
+pixel-art creature (gen 3/4 style) with front/back sprites, levels,
+moves, stats, and evolutions — whose type depends on weather, GPS
+location, and time of capture (and, at the first evolution, also on
+the moment of the evolution itself).
 
-## Cosa c'è già
+## What's already there
 
 ### UI
-Stile Pokemon Ruby/Sapphire/Emerald (dialog box, pulsanti pixel, badge
-tipo, pokeball animata, barre statistiche/PS) — `lib/widgets/`, `lib/theme/`.
+Retro RPG dialog boxes, pixel buttons, type badges, an animated
+capture scanner, stat/HP bars — `lib/widgets/`, `lib/theme/`.
 
-### Flusso di gioco lato client
-- **Cattura**: foto → GPS/meteo → upload → generazione → reveal
+### Client-side game flow
+- **Capture**: photo → GPS/weather → upload → generation → reveal
   (`lib/providers/capture_flow_provider.dart`).
-- **Battaglia**: contro una creatura selvatica appena fotografata,
-  con possibilità di indebolirla prima di tentare la cattura
+- **Battle**: against a wild Wildkin just photographed, with the
+  option to weaken it before attempting a capture
   (`lib/screens/battle_screen.dart`, `lib/services/battle_engine.dart`).
 
-### Motori di gioco (`lib/services/`)
-- `typing_engine.dart` — assegna 1+ tipi in base a meteo/stagione/bioma/ora.
-- `stats_engine.dart` — genera le 6 statistiche base (HP, Att, Dif,
-  Att Sp, Dif Sp, Vel) con un piccolo bias tematico per tipo.
-- `movepool.dart` — tabella mosse per tipo (potenza/precisione/PP),
-  4 mosse iniziali al tier 1, mosse più forti sbloccabili ai tier 2/3.
-- `evolution_engine.dart` — decide se una creatura avrà 1 o 2
-  evoluzioni future, i livelli casuali a cui scattano (nascosti al
-  giocatore, che vede solo un indizio qualitativo), e determina il
-  secondo tipo alla prima evoluzione combinando il contesto di
-  cattura con quello del momento esatto dell'evoluzione.
-- `battle_engine.dart` — risoluzione danno semplificata e probabilità
-  di cattura in stile classico (più bassi sono gli HP del selvatico,
-  più alta la probabilità).
+### Game engines (`lib/services/`)
+- `typing_engine.dart` — assigns 1+ types based on
+  weather/season/biome/time, restricted to the 11 types in the game
+  (see `lib/models/type_chart.dart`).
+- `stats_engine.dart` — generates the 6 base stats (HP, Attack,
+  Defense, Insight, Ward, Speed) with a small thematic bias per type.
+- `movepool.dart` — move table per type (power/accuracy/PP), 4
+  starting moves at tier 1, stronger moves unlockable at tiers 2/3.
+  All move names are original, not translations of any existing
+  game's moves.
+- `evolution_engine.dart` — decides whether a Wildkin will have 1 or
+  2 future evolutions, the random levels at which they trigger
+  (hidden from the player, who only sees a qualitative hint), and
+  determines the second type at the first evolution by combining the
+  capture context with the context of the exact moment of evolution.
+- `battle_engine.dart` — simplified damage resolution (now with type
+  effectiveness, see `type_chart.dart`) and capture probability in
+  the classic style (the lower the wild Wildkin's HP, the higher the
+  probability).
 
-### Modelli (`lib/models/`)
-`creature.dart` (ora con livello, exp, HP correnti, statistiche base,
-mosse, piano evolutivo, contesto di cattura ED evoluzione),
-`move.dart`, `stats.dart`, `evolution_plan.dart`, `wild_encounter.dart`.
+### Models (`lib/models/`)
+`wildkin.dart` (with level, exp, current HP, base stats, moves,
+evolution plan, capture AND evolution context), `move.dart`,
+`stats.dart`, `evolution_plan.dart`, `wild_encounter.dart`,
+`type_chart.dart`, `sighting.dart`.
 
-## Le regole di progressione implementate
+## Implemented progression rules
 
-- **Livello di cattura**: sempre 5, sempre forma base (vedi
+- **Capture level**: always 5, always base form (see
   `EvolutionEngine.createInitialPlan`).
-- **Linea evolutiva**: 50% delle catture ha 2 stadi totali (1 sola
-  evoluzione), 50% ne ha 3 (2 evoluzioni) — soglia facilmente
-  regolabile in `evolution_engine.dart` se vuoi pesare diversamente.
-- **Livelli di evoluzione** (mai mostrati per intero al giocatore):
-  - linee a 3 stadi: primo salto tra livello 15 e 30, secondo salto
-    tra 30 e 50 (garantito sempre dopo il primo);
-  - linee a 2 stadi: unico salto tra livello 30 e 50.
-- **Indizio, non numero**: `EvolutionPlan.timingLabel()` restituisce
-  "presto / nella media / tardi" in base a dove cade il livello
-  generato nel range possibile, senza mai rivelarlo.
-- **Secondo tipo**: assegnato solo alla prima evoluzione, combinando
-  il motore di tipizzazione applicato sia al contesto di cattura sia
-  a quello di evoluzione (pesato leggermente di più) — vedi
+- **Evolutionary line**: 50% of captures have 2 total stages (1
+  evolution only), 50% have 3 (2 evolutions) — an easily adjustable
+  threshold in `evolution_engine.dart` if you want to weight it
+  differently.
+- **Evolution levels** (never shown in full to the player):
+  - 3-stage lines: first jump between level 15 and 30, second jump
+    between 30 and 50 (always guaranteed after the first);
+  - 2-stage lines: a single jump between level 30 and 50.
+- **A hint, not a number**: `EvolutionPlan.timingLabel()` returns
+  "soon / average / late" based on where the generated level falls
+  in the possible range, without ever revealing it.
+- **Second type**: assigned only at the first evolution, combining
+  the typing engine applied to both the capture context and the
+  evolution context (weighted slightly more) — see
   `EvolutionEngine.determineSecondType`.
-- **Mosse**: 4 alla cattura (tier 1, coerenti col tipo), sostituibili
-  con mosse più forti (tier 2 da livello ~25, tier 3 da livello ~60).
-  La UI per "scegliere quale mossa dimenticare" quando se ne impara
-  una nuova va aggiunta (oggi `MovePool.nextMoveToLearn` restituisce
-  solo il candidato, la sostituzione la decide il chiamante).
-- **Cattura più facile se indebolito**: `BattleEngine.catchProbability`
-  usa la stessa logica della formula classica (rapporto HP
-  correnti/massimi del selvatico).
+- **Moves**: 4 at capture (tier 1, matching the type), replaceable
+  with stronger moves (tier 2 from level ~25, tier 3 from level
+  ~60). The UI for "choosing which move to forget" when a new one is
+  learned still needs to be added (today `MovePool.nextMoveToLearn`
+  only returns the candidate; the caller decides the replacement).
+- **Easier capture when weakened**: `BattleEngine.catchProbability`
+  uses the same logic as the classic formula (ratio of the wild
+  Wildkin's current/max HP).
+- **Type effectiveness**: implemented in `battle_engine.dart` via
+  `TypeChart.effectiveness`, with "super effective / not very
+  effective / no effect" messages shown in battle.
 
-## Backend Supabase (già pronto in `supabase/`)
+## Supabase backend (already set up in `supabase/`)
 
 ```
 supabase/
   migrations/
-    0001_init.sql                    # tabelle, RLS, bucket storage
-    0002_anti_spoof.sql              # sightings + photo_hashes (vedi sotto)
+    0001_init.sql                    # tables, RLS, storage bucket
+    0002_anti_spoof.sql              # sightings + photo_hashes (see below)
   functions/
-    _shared/                        # porting TS dei motori Dart
+    _shared/                        # TS port of the Dart engines
       typing_engine.ts
       stats_engine.ts
       movepool.ts
       evolution.ts
+      type_chart.ts                 # not called by any function yet, see below
       cors.ts
-      finalize_capture.ts           # logica di cattura condivisa (ex generate-creature)
-      phash.ts                      # hash percettivo, per il doppio avvistamento
-    generate-creature/index.ts      # percorso diretto, tenuto per test manuali
-    resolve-sighting/index.ts       # percorso normale: doppio avvistamento
+      finalize_capture.ts           # shared capture logic (formerly in generate-wildkin)
+      phash.ts                      # perceptual hash, for the double sighting
+      species_classifier.ts         # Claude vision fallback for species detection
+    generate-wildkin/index.ts      # direct path, kept for manual testing
+    resolve-sighting/index.ts       # normal path: double sighting
 ```
 
-`finalize_capture.ts` contiene la logica che prima viveva interamente
-in `generate-creature`: calcola tipo, statistiche, mosse iniziali e
-piano evolutivo, salva la riga in `captures` rispettando le policy RLS
-e restituisce il JSON che `Creature.fromJson` si aspetta già lato
-Flutter. Ora viene richiamata da due punti:
+`finalize_capture.ts` contains the logic that used to live entirely
+inside `generate-wildkin`: it computes type, stats, starting moves,
+and evolution plan, saves the row into `captures` respecting the RLS
+policies, and returns the JSON that `Wildkin.fromJson` already
+expects on the Flutter side. It's now called from two places:
 
-- `generate-creature/index.ts`, percorso diretto (un solo scatto,
-  nessuna verifica anti-spoofing) — utile per test da terminale, **non
-  più usato dalla UI normale**.
-- `resolve-sighting/index.ts`, il percorso che la UI usa davvero: vedi
-  la sezione "Anti-cattura-da-internet" più sotto.
+- `generate-wildkin/index.ts`, the direct path (a single shot, no
+  anti-spoofing checks) — useful for testing from the terminal,
+  **no longer used by the normal UI**.
+- `resolve-sighting/index.ts`, the path the UI actually uses: see the
+  "Anti-photo-of-a-screen" section below.
 
 ### Deploy
 
@@ -105,130 +117,136 @@ npm install -g supabase
 supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 
-supabase db push                          # crea tabelle, RLS, bucket (incl. 0002_anti_spoof.sql)
-supabase functions deploy generate-creature
+supabase db push                          # creates tables, RLS, bucket (incl. 0002_anti_spoof.sql)
+supabase functions deploy generate-wildkin
 supabase functions deploy resolve-sighting
 ```
 
-Poi in `lib/services/supabase_service.dart` sostituisci
-`YOUR_PROJECT_REF` e `YOUR_SUPABASE_ANON_KEY` con i valori reali
+Then in `lib/services/supabase_service.dart` replace
+`YOUR_PROJECT_REF` and `YOUR_SUPABASE_ANON_KEY` with the real values
 (dashboard → Settings → API).
 
-### Sign-in anonimo (necessario)
+### Anonymous sign-in (required)
 
-`generate-creature` richiede un utente autenticato (le policy RLS si
-basano su `auth.uid()`). `main.dart` fa già il sign-in anonimo in
-automatico all'avvio — l'unica cosa da fare è abilitarlo nella
-dashboard: **Authentication → Providers → Anonymous Sign-Ins**.
+`generate-wildkin` requires an authenticated user (the RLS policies
+rely on `auth.uid()`). `main.dart` already signs in anonymously
+automatically on startup — the only thing left to do is enable it in
+the dashboard: **Authentication → Providers → Anonymous Sign-Ins**.
 
-### Verifica rapida da terminale
+### Quick check from the terminal
 
 ```bash
-supabase functions invoke generate-creature --data '{
+supabase functions invoke generate-wildkin --data '{
   "original_photo_url": "https://example.com/test.jpg",
   "context": {
     "captured_at": "2026-08-30T14:00:00.000Z",
     "latitude": 41.9,
     "longitude": 12.5,
     "elevation_meters": 20,
-    "biome": "cittaUrbana",
+    "biome": "urbanCity",
     "weather_condition": "clear",
     "temperature_celsius": 32,
     "humidity_percent": 40,
     "wind_speed_kmh": 5,
     "is_night_time": false,
-    "season": "estate"
+    "season": "summer"
   }
 }'
 ```
 
-Con questi valori (estate, 32°C, città) dovresti vedere una creatura
-con buone probabilità di tipo fuoco/terra/acciaio/normale — un buon
-modo per confermare che il motore di tipizzazione è stato portato
-correttamente in TypeScript.
+With these values (summer, 32°C, city) you should see a Wildkin with
+good odds of a fire/ground/electric/rock type — a good way to confirm
+the typing engine was ported correctly to TypeScript.
 
-## Anti-cattura-da-internet/rivista
+## Anti-photo-of-a-screen / re-shot-photo
 
-Cinque meccanismi, pensati per alzare l'attrito di chi prova a
-catturare da una foto trovata online invece che da un animale reale.
-Nessuno di questi da solo è infallibile (vedi i commenti nei rispettivi
-file): l'obiettivo è la somma, non un singolo controllo perfetto.
+Five mechanisms, meant to raise the friction for anyone trying to
+capture from a photo found online instead of a real animal. None of
+these is foolproof on its own (see the comments in the respective
+files): the goal is their sum, not one perfect check.
 
-1. **Burst + parallasse** (`lib/services/liveness_service.dart`): 3
-   frame ravvicinati, block-matching a griglia 3x3, punteggio di
-   quanto i blocchi si muovono in modo disomogeneo tra loro. Vicino a
-   zero = probabile superficie piatta.
-2. **Profondità** (`lib/services/depth_check_service.dart`): SOLO
-   scaffold, degrada sempre a "non disponibile" finché non si scrive
-   il codice nativo (vedi i commenti nel file per cosa implementare
-   su iOS/Android). Non blocca mai nulla da solo.
-3. **Correlazione col giroscopio** ("poor man's AR", stesso file del
-   punto 1): il telefono deve essersi fisicamente mosso un minimo
-   durante lo scatto. Frame "mossi" ma giroscopio fermo (o viceversa)
-   è un'incoerenza sospetta.
-4. **Finestra temporale** (`kSightingWindowDuration` in
-   `capture_flow_provider.dart`, 20 minuti): il secondo scatto deve
-   arrivare entro questo tempo dal primo, altrimenti tutto si annulla
+1. **Burst + parallax** (`lib/services/liveness_service.dart`): 3
+   closely spaced frames, 3x3-grid block-matching, a score of how
+   unevenly the blocks move relative to each other. Near zero =
+   probably a flat surface.
+2. **Depth** (`lib/services/depth_check_service.dart`): scaffold
+   ONLY, always degrades to "not available" until the native code is
+   written (see the comments in the file for what to implement on
+   iOS/Android). Never blocks anything on its own.
+3. **Gyroscope correlation** ("poor man's AR", same file as point 1):
+   the phone must have physically moved at least a little during the
+   shot. "Moved" frames but a still gyroscope (or vice versa) is a
+   suspicious inconsistency.
+4. **Time window** (`kSightingWindowDuration` in
+   `capture_flow_provider.dart`, 20 minutes): the second shot must
+   arrive within this time of the first, or everything is canceled
    (`CaptureStep.sightingExpired`).
-5. **Doppio avvistamento** (`supabase/functions/resolve-sighting/`):
-   il vero cuore del sistema. Il primo scatto registra un
-   "avvistamento pending"; il secondo, per essere accettato, deve
-   avvenire entro ~300m dal primo, con una specie coerente (se
-   rilevata), e con un'immagine NÉ identica alla prima (altrimenti è
-   la stessa foto statica riproposta) NÉ troppo simile a una foto già
-   vista da un altro utente (dedup globale via `photo_hashes`,
-   hash percettivo in `_shared/phash.ts`).
+5. **Double sighting** (`supabase/functions/resolve-sighting/`): the
+   real heart of the system. The first shot records a "pending
+   sighting"; the second, to be accepted, must happen within ~300m of
+   the first, with a consistent species (if detected), and with an
+   image that is NEITHER identical to the first (otherwise it's the
+   same static photo shown again) NOR too similar to a photo already
+   seen from another user (global dedup via `photo_hashes`,
+   perceptual hash in `_shared/phash.ts`).
 
-I punti 1-4 viaggiano nel `CaptureContext.liveness` inviato al
-server come indizio, MAI come unica difesa (un client manomesso può
-sempre mentire su questi valori) — la barriera davvero robusta è il 5,
-perché non dipende da nulla che il client dichiari di aver misurato.
+Points 1-4 travel inside `CaptureContext.liveness` sent to the server
+as a clue, NEVER as the sole defense (a tampered client can always
+lie about these values) — the truly robust barrier is point 5,
+because it doesn't depend on anything the client claims to have
+measured.
 
-Tutti i segnali/soglie (raggio di ricerca del block-matching, soglie
-di distanza Hamming, 300m, 20 minuti...) sono punti di partenza
-ragionevoli ma NON calibrati su dati reali: vanno testati su device
-veri e aggiustati.
+All the signals/thresholds (block-matching search radius, Hamming
+distance thresholds, 300m, 20 minutes...) are reasonable starting
+points but NOT calibrated on real data: they need to be tested on
+real devices and adjusted.
 
-## Cosa manca ancora
+## What's still missing
 
-1. **Generazione immagini reale**: oggi `front_sprite_url` e
-   `back_sprite_url` sono placeholder (= la foto originale). Il punto
-   esatto dove agganciare il servizio AI è commentato con TODO in
+1. **Real image generation**: today `front_sprite_url` and
+   `back_sprite_url` are placeholders (= the original photo). The
+   exact spot to hook up the AI service is marked with a TODO in
    `supabase/functions/_shared/finalize_capture.ts`.
 
-2. **Edge function `evolve-creature`** (non ancora scritta): stesso
-   pattern di `finalize_capture.ts`, ma userà anche
-   `determineSecondType` (da portare da `evolution_engine.dart`) e
-   riceverà il contesto ATTUALE oltre all'id della creatura.
+2. **`evolve-wildkin` edge function** (not written yet): same pattern
+   as `finalize_capture.ts`, but will also use `determineSecondType`
+   (to be ported from `evolution_engine.dart`) and will receive the
+   CURRENT context in addition to the Wildkin's id.
 
-3. **Edge function `resolve-wild-encounter`** (non ancora scritta,
-   opzionale se si preferisce generare l'incontro lato client): serve
-   per collegare `BattleScreen` al resto del flusso.
+3. **`resolve-wild-encounter` edge function** (not written yet,
+   optional if you'd rather generate the encounter client-side):
+   needed to connect `BattleScreen` to the rest of the flow.
 
-4. **Codice nativo per il segnale di profondità** (meccanismo 2,
-   opzionale): vedi i TODO in `depth_check_service.dart`. Oggi il
-   segnale è sempre `null` su ogni device.
+4. **Native code for the depth signal** (mechanism 2, optional): see
+   the TODOs in `depth_check_service.dart`. Today the signal is
+   always `null` on every device.
 
-5. **Calibrazione su device reali** di tutte le soglie del piano
-   anti-spoofing (vedi sezione sopra): sono state scritte a tavolino,
-   mai testate con hardware vero.
+5. **Calibration on real devices** of all the anti-spoofing plan's
+   thresholds (see the section above): they were written at a desk,
+   never tested with real hardware.
 
-## Avvio
+6. **New artwork for the type badges**: the current
+   `assets/type_badges/*.png` icons and the very first version of the
+   type color palette were too close to an existing game's official
+   colors/icon style. The colors have already been replaced with an
+   original palette (see `lib/theme/app_colors.dart`), but the badge
+   PNGs themselves should be redrawn from scratch before shipping.
+
+## Running it
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-## Prossimi passi suggeriti
+## Suggested next steps
 
-- Pipeline di generazione immagini AI (sostituisce i placeholder).
-- Collegare foto → `WildEncounter` → `BattleScreen` nel flusso di navigazione.
-- Sistema di esperienza/level-up dopo ogni battaglia vinta (oggi il
-  livello sale solo "concettualmente": va aggiunta la logica che
-  assegna EXP e richiama `EvolutionEngine.shouldEvolveNow`).
-- UI per scegliere quale mossa dimenticare quando se ne impara una
-  nuova (oggi `MovePool.nextMoveToLearn` è pronto lato logica).
-- Efficacia di tipo (super efficace / poco efficace) nel `battle_engine.dart`.
-- Autenticazione "vera" (email/social) in aggiunta a quella anonima,
-  per recuperare i propri Pokemon su un nuovo dispositivo.
+- AI image-generation pipeline (replaces the placeholders).
+- Connect photo → `WildEncounter` → `BattleScreen` in the navigation flow.
+- Experience/level-up system after each won battle (today the level
+  only goes up "conceptually": the logic that awards EXP and calls
+  `EvolutionEngine.shouldEvolveNow` still needs to be added).
+- UI for choosing which move to forget when a new one is learned
+  (today `MovePool.nextMoveToLearn` is ready on the logic side).
+- "Real" authentication (email/social) in addition to the anonymous
+  one, to retrieve your own Wildkin on a new device.

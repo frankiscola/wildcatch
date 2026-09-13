@@ -2,10 +2,11 @@ import 'capture_context.dart';
 import 'move.dart';
 import 'stats.dart';
 
-/// Una creatura selvatica appena "scoperta" fotografando un animale,
-/// prima che il giocatore decida se combatterla o catturarla subito.
-/// A differenza di [Creature] non ha ancora un piano evolutivo attivo
-/// né un nickname: quelli si assegnano solo alla cattura effettiva.
+/// A wild Wildkin just "discovered" by photographing an animal,
+/// before the player decides whether to battle it or catch it
+/// right away. Unlike [Wildkin] it doesn't have an active evolution
+/// plan or a nickname yet — those are only assigned on an actual
+/// capture.
 class WildEncounter {
   final String photoUrl;
   final List<String> types;
@@ -14,8 +15,8 @@ class WildEncounter {
   final List<Move> moves;
   final CaptureContext context;
 
-  /// HP correnti, che scendono durante una battaglia prima
-  /// dell'eventuale tentativo di cattura.
+  /// Current HP, which drops during a battle before any capture
+  /// attempt.
   final int currentHp;
   final int maxHp;
 

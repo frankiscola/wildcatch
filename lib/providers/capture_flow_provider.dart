@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/capture_context.dart';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../models/sighting.dart';
 import '../services/camera_capture_service.dart';
 import '../services/depth_check_service.dart';
@@ -14,37 +14,37 @@ import '../services/supabase_service.dart';
 import '../services/weather_service.dart';
 import '../services/name_generator.dart';
 
-/// Le fasi del flusso di cattura, ora a DUE scatti (vedi meccanismo 5,
-/// doppio avvistamento) invece di uno solo.
+/// The phases of the capture flow, now with TWO shots (see mechanism
+/// 5, double sighting) instead of just one.
 enum CaptureStep {
   idle,
-  requestingContext, // GPS + meteo + elevazione
-  capturingBurst, // meccanismi 1+3: raffica di frame + giroscopio
+  requestingContext, // GPS + weather + elevation
+  capturingBurst, // mechanisms 1+3: frame burst + gyroscope
   uploadingPhoto,
-  recordingSighting, // primo scatto: registra l'avvistamento
-  awaitingConfirmation, // in attesa del secondo scatto, con countdown (meccanismo 4)
-  confirmingSighting, // secondo scatto: verifica + finalizza
+  recordingSighting, // first shot: records the sighting
+  awaitingConfirmation, // waiting for the second shot, with a countdown (mechanism 4)
+  confirmingSighting, // second shot: verify + finalize
   naming,
   done,
-  sightingExpired, // la finestra è scaduta prima della conferma
-  rejected, // il server ha rifiutato la conferma (specie diversa, troppo lontano, immagine duplicata...)
+  sightingExpired, // the window expired before confirmation
+  rejected, // the server rejected the confirmation (different species, too far, duplicate image...)
   error,
 }
 
-/// Quanto tempo l'utente ha per tornare a fotografare lo stesso
-/// animale dopo il primo avvistamento. Ricalibrabile: più è corto,
-/// più è difficile "prepararsi" con un'immagine trovata online; più è
-/// lungo, più è comodo per chi sta davvero seguendo un animale reale
-/// che si allontana lentamente.
+/// How long the player has to come back and photograph the same
+/// animal after the first sighting. Tunable: shorter makes it harder
+/// to "prepare" with an image found online; longer is more
+/// convenient for someone genuinely following a real animal that's
+/// slowly moving away.
 const kSightingWindowDuration = Duration(minutes: 20);
 
 class CaptureFlowState {
   final CaptureStep step;
   final String? errorMessage;
   final SightingRejectionReason? rejectionReason;
-  final Creature? result;
+  final Wildkin? result;
   final SightingRecorded? pendingSighting;
-  final Duration? remaining; // countdown per la UI durante awaitingConfirmation
+  final Duration? remaining; // countdown for the UI during awaitingConfirmation
   final String? detectedSpeciesHint;
 
   const CaptureFlowState({
@@ -61,7 +61,7 @@ class CaptureFlowState {
     CaptureStep? step,
     String? errorMessage,
     SightingRejectionReason? rejectionReason,
-    Creature? result,
+    Wildkin? result,
     SightingRecorded? pendingSighting,
     Duration? remaining,
     String? detectedSpeciesHint,
@@ -111,15 +111,15 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
         _nameGenerator = nameGenerator ?? NameGenerator(),
         super(const CaptureFlowState());
 
-  /// Inizializza la fotocamera live. Va chiamato quando la schermata
-  /// di cattura entra in scena, prima di poter chiamare
-  /// captureFirstSighting/captureConfirmation.
+  /// Initializes the live camera. Must be called when the capture
+  /// screen comes into view, before captureFirstSighting/
+  /// captureConfirmation can be called.
   Future<void> initializeCamera() => _camera.initialize();
 
   CameraCaptureService get camera => _camera;
 
-  /// Primo scatto: registra l'avvistamento e apre la finestra
-  /// temporale (meccanismo 4) entro cui va confermato.
+  /// First shot: records the sighting and opens the time window
+  /// (mechanism 4) within which it must be confirmed.
   Future<void> captureFirstSighting({required String userId}) async {
     try {
       final capture = await _captureAndAnalyze();
@@ -150,13 +150,13 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
     }
   }
 
-  /// Secondo scatto: prova a confermare l'avvistamento in corso.
+  /// Second shot: attempts to confirm the sighting in progress.
   Future<void> captureConfirmation({required String userId}) async {
     final pending = state.pendingSighting;
     if (pending == null) {
       state = state.copyWith(
         step: CaptureStep.error,
-        errorMessage: 'Nessun avvistamento in corso da confermare.',
+        errorMessage: 'No sighting in progress to confirm.',
       );
       return;
     }
@@ -171,7 +171,7 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
       );
 
       state = state.copyWith(step: CaptureStep.confirmingSighting);
-      final creature = await _supabaseService.confirmSighting(
+      final wildkin = await _supabaseService.confirmSighting(
         sightingId: pending.sightingId,
         originalPhotoUrl: photoUrl,
         context: capture.context,
@@ -183,26 +183,26 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
       state = state.copyWith(step: CaptureStep.naming);
       final name = _nameGenerator.generate(
         capture.speciesHint ?? state.detectedSpeciesHint,
-        creature.types,
+        wildkin.types,
       );
-      final renamed = await _supabaseService.renameCreature(id: creature.id, nickname: name);
+      final renamed = await _supabaseService.renameWildkin(id: wildkin.id, nickname: name);
 
       state = state.copyWith(step: CaptureStep.done, result: renamed);
     } on SightingRejectedException catch (e) {
-      // Rifiuto motivato dal server: se la finestra non è scaduta,
-      // l'utente resta libero di riprovare subito un altro scatto
-      // (pendingSighting non viene azzerato). Se è scaduta, il
-      // countdown stesso avrà già portato lo stato a
-      // sightingExpired prima ancora di arrivare qui.
+      // Server-side rejection: if the window hasn't expired, the
+      // player remains free to immediately try another shot
+      // (pendingSighting isn't cleared). If it has expired, the
+      // countdown itself will already have moved the state to
+      // sightingExpired before we even get here.
       state = state.copyWith(step: CaptureStep.rejected, rejectionReason: e.reason);
     } catch (e) {
       state = state.copyWith(step: CaptureStep.error, errorMessage: e.toString());
     }
   }
 
-  /// Meccanismo 1+2+3: raffica di frame + giroscopio (+ profondità se
-  /// disponibile) e costruzione del CaptureContext completo, usato
-  /// sia dal primo scatto sia dalla conferma.
+  /// Mechanisms 1+2+3: frame burst + gyroscope (+ depth if available)
+  /// and building the full CaptureContext, used by both the first
+  /// shot and the confirmation.
   Future<_CapturedMoment> _captureAndAnalyze() async {
     state = state.copyWith(step: CaptureStep.requestingContext);
     final position = await _locationService.getCurrentPosition();
@@ -215,8 +215,9 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
       position.longitude,
     );
 
-    // TODO: sostituire con una stima reale della distanza dalla costa
-    // (dataset costiero o Overpass API) invece di questo placeholder.
+    // TODO: replace with a real estimate of distance from the coast
+    // (a coastline dataset or the Overpass API) instead of this
+    // placeholder.
     const placeholderDistanceFromCoastKm = 999.0;
     final biome = _locationService.estimateBiome(
       elevationMeters: elevation,
@@ -228,17 +229,16 @@ class CaptureFlowNotifier extends StateNotifier<CaptureFlowState> {
     final frames = await _camera.captureBurst();
     final livenessReport = await _liveness.finishAndAnalyze(frames);
 
-    // Segnale best-effort, degrada a null sulla stragrande
-    // maggioranza dei device finché non si scrive il codice nativo
-    // (vedi DepthCheckService). Non blocca mai la cattura da solo:
-    // qui lo leggiamo ma la decisione se avvisare l'utente resta
-    // interamente lato server, che può scegliere di ignorarlo con
-    // sicurezza se è null.
+    // Best-effort signal, degrades to null on the vast majority of
+    // devices until the native code is written (see
+    // DepthCheckService). Never blocks the capture on its own: we
+    // read it here, but the decision on whether to warn the player
+    // stays entirely server-side, which can safely ignore it if null.
     await _depth.sampleCenterDepthVariance();
 
-    // Frame centrale del burst: meno soggetto a mosso rispetto al
-    // primo/ultimo, che spesso catturano l'inizio/fine del piccolo
-    // movimento della mano usato per il calcolo della parallasse.
+    // Middle frame of the burst: less prone to motion blur than the
+    // first/last, which often capture the start/end of the small
+    // hand movement used for the parallax calculation.
     final photoBytes = frames[frames.length ~/ 2];
 
     String? speciesHint;
@@ -316,7 +316,7 @@ final captureFlowProvider = StateNotifierProvider<CaptureFlowNotifier, CaptureFl
   (ref) => CaptureFlowNotifier(),
 );
 
-/// Elenco delle creature catturate dall'utente, per il pokedex.
-final myCreaturesProvider = FutureProvider<List<Creature>>((ref) async {
-  return SupabaseService().getMyCreatures();
+/// List of the Wildkin the player has caught, for the Field Journal.
+final myWildkinProvider = FutureProvider<List<Wildkin>>((ref) async {
+  return SupabaseService().getMyWildkin();
 });

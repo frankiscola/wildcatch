@@ -1,18 +1,18 @@
--- Meccanismo 5 (doppio avvistamento) e dedup globale delle foto.
--- Applicare con: supabase db push (dopo `supabase link`).
+-- Mechanism 5 (double sighting) and global photo dedup.
+-- Apply with: supabase db push (after `supabase link`).
 
 -- ─────────────────────────────────────────────────────────────
--- Avvistamenti in attesa di conferma. Un avvistamento diventa una
--- 'captures' solo se confermato entro expires_at da una seconda foto
--- plausibilmente dello stesso animale (vedi resolve-sighting).
+-- Sightings awaiting confirmation. A sighting becomes a 'captures'
+-- row only if confirmed within expires_at by a second photo
+-- plausibly of the same animal (see resolve-sighting).
 -- ─────────────────────────────────────────────────────────────
 create table if not exists sightings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
 
   photo_url text not null,
-  photo_ahash text not null,        -- average-hash esadecimale (16 char = 64 bit)
-  species_hint text,                -- rilevamento on-device (ML Kit), nullable
+  photo_ahash text not null,        -- hex average-hash (16 chars = 64 bits)
+  species_hint text,                -- on-device detection (ML Kit), nullable
 
   latitude double precision not null,
   longitude double precision not null,
@@ -41,18 +41,16 @@ create policy "sightings_update_own" on sightings
   for update using (auth.uid() = user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- Hash percettivo di OGNI foto vista dall'app (sia i due scatti di
--- un avvistamento sia, in futuro, eventuali foto di battaglia), per
--- poter controllare se una nuova foto combacia in modo sospetto con
--- una già vista da un altro utente — segnale forte di "immagine
--- presa da internet", perché una foto scattata dal vivo è
--- statisticamente unica.
+-- Perceptual hash of EVERY photo the app has seen (both shots of a
+-- sighting and, in the future, any battle photos), to check whether
+-- a new photo suspiciously matches one already seen from another
+-- user — a strong signal of "image taken from the internet", since a
+-- live-taken photo is statistically unique.
 --
--- NIENTE dati sensibili in questa tabella (solo un hash e l'id
--- utente): per questo la SELECT è permessa a chiunque sia
--- autenticato, non solo al proprietario — il controllo di dedup deve
--- poter confrontare con le foto di TUTTI gli utenti, non solo le
--- proprie.
+-- NO sensitive data in this table (just a hash and the user id):
+-- that's why SELECT is allowed to anyone authenticated, not just the
+-- owner — the dedup check needs to compare against ALL users'
+-- photos, not just its own.
 -- ─────────────────────────────────────────────────────────────
 create table if not exists photo_hashes (
   id uuid primary key default gen_random_uuid(),
@@ -72,10 +70,10 @@ create policy "photo_hashes_select_all_authenticated" on photo_hashes
 create policy "photo_hashes_insert_own" on photo_hashes
   for insert with check (auth.uid() = user_id);
 
--- NOTA SULLA SCALABILITÀ: oggi resolve-sighting scarica un batch di
--- hash recenti e calcola la distanza di Hamming in JavaScript, il che
--- va benissimo per un'app hobby/con pochi utenti. Se il volume di
--- catture cresce molto, conviene o (a) precalcolare bucket di hash
--- simili con un'estensione tipo pg_trgm/pgvector, oppure (b) tenere
--- solo una finestra temporale recente di photo_hashes invece che lo
--- storico completo.
+-- SCALABILITY NOTE: today resolve-sighting downloads a batch of
+-- recent hashes and computes the Hamming distance in JavaScript,
+-- which is perfectly fine for a hobby app with few users. If capture
+-- volume grows a lot, it's worth either (a) precomputing buckets of
+-- similar hashes with an extension like pg_trgm/pgvector, or (b)
+-- keeping only a recent time window of photo_hashes instead of the
+-- full history.

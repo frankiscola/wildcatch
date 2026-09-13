@@ -1,12 +1,11 @@
-// Porting della sola createInitialPlan() di evolution_engine.dart:
-// è tutto ciò che serve alla cattura. La logica di
-// determineSecondType() verrà portata in evolve-creature quando
-// costruiremo quella function.
+// Port of only createInitialPlan() from evolution_engine.dart: it's
+// all that's needed at capture time. The determineSecondType() logic
+// will be ported into an evolve-wildkin function once we build that.
 //
-// IMPORTANTE: questi range devono restare identici a quelli in
-// lib/models/evolution_plan.dart (EvolutionRanges), altrimenti
-// l'indizio "presto / nella media / tardi" mostrato dal client
-// smette di corrispondere alle soglie generate qui.
+// IMPORTANT: these ranges must stay identical to the ones in
+// lib/models/evolution_plan.dart (EvolutionRanges), otherwise the
+// "soon / average / late" hint shown by the client stops matching
+// the thresholds generated here.
 
 export interface EvolutionPlanJson {
   total_stages: number;

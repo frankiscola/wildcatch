@@ -1,127 +1,101 @@
 import 'dart:math';
 import '../models/move.dart';
 
-/// Tabella statica delle mosse disponibili per ciascun tipo, divisa
-/// in 3 "tier" di potenza crescente. Il tier 1 è quello da cui si
-/// pescano le mosse iniziali (livello 5), il tier 2 si sblocca
-/// verso metà carriera, il tier 3 con creature già navigate.
+/// Static table of the moves available for each of the 11 types in
+/// the game, split into 3 power "tiers". Tier 1 is what starting
+/// moves are drawn from (level 5), tier 2 unlocks around mid-career,
+/// tier 3 for well-trained Wildkin.
 ///
-/// NOTA: questa è una versione MVP con poche mosse per tipo, pensata
-/// per essere ampliata facilmente aggiungendo voci alla lista.
-/// In produzione conviene spostare questa tabella in una tabella
-/// Postgres ('moves') così da poterla ampliare senza rilasci.
+/// NOTE: this is an MVP version with a handful of moves per type,
+/// meant to be extended easily by adding entries to the list. In
+/// production it's worth moving this table into a Postgres table
+/// ('moves') so it can grow without app releases.
+///
+/// All move names below are original — not translations of any
+/// existing game's move names — by design.
 class MovePool {
   static const Map<String, List<Move>> _byType = {
-    'normale': [
-      Move(name: 'Azzannamento', type: 'normale', category: MoveCategory.fisica, power: 35, accuracy: 100, maxPp: 35, tier: 1),
-      Move(name: 'Rapidità', type: 'normale', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 30, tier: 1),
-      Move(name: 'Colpo Rapido', type: 'normale', category: MoveCategory.fisica, power: 60, accuracy: 100, maxPp: 20, tier: 2),
-      Move(name: 'Ipervoce', type: 'normale', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 10, tier: 3),
+    'fire': [
+      Move(name: 'Spark Flame', type: 'fire', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Cinder Bite', type: 'fire', category: MoveCategory.physical, power: 45, accuracy: 95, maxPp: 20, tier: 1),
+      Move(name: 'Blaze Jet', type: 'fire', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 15, tier: 2),
+      Move(name: 'Smoldering Curse', type: 'fire', category: MoveCategory.status, power: 0, accuracy: 85, maxPp: 15, tier: 2),
+      Move(name: 'Volcanic Burst', type: 'fire', category: MoveCategory.special, power: 120, accuracy: 100, maxPp: 5, tier: 3),
     ],
-    'fuoco': [
-      Move(name: 'Braciere', type: 'fuoco', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Morso Infuocato', type: 'fuoco', category: MoveCategory.fisica, power: 45, accuracy: 95, maxPp: 20, tier: 1),
-      Move(name: 'Lanciafiamme', type: 'fuoco', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Fuoco Fatuo', type: 'fuoco', category: MoveCategory.stato, power: 0, accuracy: 85, maxPp: 15, tier: 2),
-      Move(name: 'Eruzione', type: 'fuoco', category: MoveCategory.speciale, power: 120, accuracy: 100, maxPp: 5, tier: 3),
+    'water': [
+      Move(name: 'Water Jet', type: 'water', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Foam Burst', type: 'water', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 30, tier: 1),
+      Move(name: 'Deluge Blast', type: 'water', category: MoveCategory.special, power: 90, accuracy: 90, maxPp: 10, tier: 2),
+      Move(name: 'Tidal Wave', type: 'water', category: MoveCategory.special, power: 95, accuracy: 100, maxPp: 15, tier: 2),
+      Move(name: 'Maelstrom', type: 'water', category: MoveCategory.special, power: 120, accuracy: 100, maxPp: 5, tier: 3),
     ],
-    'acqua': [
-      Move(name: 'Spruzzo', type: 'acqua', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Bolla', type: 'acqua', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 30, tier: 1),
-      Move(name: 'Idropompa', type: 'acqua', category: MoveCategory.speciale, power: 90, accuracy: 90, maxPp: 10, tier: 2),
-      Move(name: 'Surf', type: 'acqua', category: MoveCategory.speciale, power: 95, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: "Uragano D'Acqua", type: 'acqua', category: MoveCategory.speciale, power: 120, accuracy: 100, maxPp: 5, tier: 3),
+    'grass': [
+      Move(name: 'Bramble Snap', type: 'grass', category: MoveCategory.physical, power: 45, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Sap Drain', type: 'grass', category: MoveCategory.special, power: 20, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Thorned Slash', type: 'grass', category: MoveCategory.physical, power: 90, accuracy: 100, maxPp: 15, tier: 2),
+      Move(name: 'Radiant Bloom', type: 'grass', category: MoveCategory.special, power: 120, accuracy: 100, maxPp: 10, tier: 3),
     ],
-    'erba': [
-      Move(name: 'Frustata', type: 'erba', category: MoveCategory.fisica, power: 45, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Assorbisai', type: 'erba', category: MoveCategory.speciale, power: 20, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Foglielama', type: 'erba', category: MoveCategory.fisica, power: 90, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Solarraggio', type: 'erba', category: MoveCategory.speciale, power: 120, accuracy: 100, maxPp: 10, tier: 3),
+    'electric': [
+      Move(name: 'Static Zap', type: 'electric', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 30, tier: 1),
+      Move(name: 'Faint Spark', type: 'electric', category: MoveCategory.special, power: 45, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Voltaic Arc', type: 'electric', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 15, tier: 2),
+      Move(name: 'Storm Bolt', type: 'electric', category: MoveCategory.special, power: 110, accuracy: 70, maxPp: 10, tier: 3),
     ],
-    'elettro': [
-      Move(name: 'Scarica', type: 'elettro', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 30, tier: 1),
-      Move(name: 'Fulmine Debole', type: 'elettro', category: MoveCategory.speciale, power: 45, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Fulmine', type: 'elettro', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Tuono', type: 'elettro', category: MoveCategory.speciale, power: 110, accuracy: 70, maxPp: 10, tier: 3),
+    'ice': [
+      Move(name: 'Chill Gust', type: 'ice', category: MoveCategory.special, power: 55, accuracy: 95, maxPp: 15, tier: 1),
+      Move(name: 'Frost Orb', type: 'ice', category: MoveCategory.special, power: 40, accuracy: 90, maxPp: 25, tier: 1),
+      Move(name: 'Glacial Ray', type: 'ice', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 10, tier: 2),
+      Move(name: 'Frost Squall', type: 'ice', category: MoveCategory.special, power: 110, accuracy: 70, maxPp: 5, tier: 3),
     ],
-    'ghiaccio': [
-      Move(name: 'Vento Gelido', type: 'ghiaccio', category: MoveCategory.speciale, power: 55, accuracy: 95, maxPp: 15, tier: 1),
-      Move(name: 'Palla Gelida', type: 'ghiaccio', category: MoveCategory.speciale, power: 40, accuracy: 90, maxPp: 25, tier: 1),
-      Move(name: 'Raggio Gelido', type: 'ghiaccio', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 10, tier: 2),
-      Move(name: 'Bufera', type: 'ghiaccio', category: MoveCategory.speciale, power: 110, accuracy: 70, maxPp: 5, tier: 3),
+    'poison': [
+      Move(name: 'Toxic Soot', type: 'poison', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Venom Prick', type: 'poison', category: MoveCategory.physical, power: 15, accuracy: 100, maxPp: 35, tier: 1),
+      Move(name: 'Corrosive Flame', type: 'poison', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 10, tier: 2),
+      Move(name: 'Acid Surge', type: 'poison', category: MoveCategory.special, power: 100, accuracy: 90, maxPp: 10, tier: 3),
     ],
-    'lotta': [
-      Move(name: 'Braccio Teso', type: 'lotta', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Doppio Colpo', type: 'lotta', category: MoveCategory.fisica, power: 35, accuracy: 90, maxPp: 30, tier: 1),
-      Move(name: 'Attacco Rissoso', type: 'lotta', category: MoveCategory.fisica, power: 85, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Focus Blast', type: 'lotta', category: MoveCategory.speciale, power: 120, accuracy: 70, maxPp: 5, tier: 3),
+    'ground': [
+      Move(name: 'Pitfall Strike', type: 'ground', category: MoveCategory.physical, power: 45, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Sand Toss', type: 'ground', category: MoveCategory.status, power: 0, accuracy: 100, maxPp: 15, tier: 1),
+      Move(name: 'Tremor Quake', type: 'ground', category: MoveCategory.physical, power: 100, accuracy: 100, maxPp: 10, tier: 2),
+      Move(name: 'Rising Dust', type: 'ground', category: MoveCategory.physical, power: 90, accuracy: 85, maxPp: 10, tier: 3),
     ],
-    'veleno': [
-      Move(name: 'Fuliggine Tossica', type: 'veleno', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Puntura Velenosa', type: 'veleno', category: MoveCategory.fisica, power: 15, accuracy: 100, maxPp: 35, tier: 1),
-      Move(name: 'Fuoco Tossico', type: 'veleno', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 10, tier: 2),
-      Move(name: "Attacco D'Acido", type: 'veleno', category: MoveCategory.speciale, power: 100, accuracy: 90, maxPp: 10, tier: 3),
+    'flying': [
+      Move(name: 'Wing Jab', type: 'flying', category: MoveCategory.physical, power: 35, accuracy: 100, maxPp: 35, tier: 1),
+      Move(name: 'Wind Spiral', type: 'flying', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Sky Acrobat', type: 'flying', category: MoveCategory.physical, power: 85, accuracy: 100, maxPp: 15, tier: 2),
+      Move(name: 'Cyclone Force', type: 'flying', category: MoveCategory.special, power: 110, accuracy: 70, maxPp: 10, tier: 3),
     ],
-    'terra': [
-      Move(name: 'Colpo Fossa', type: 'terra', category: MoveCategory.fisica, power: 45, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Lancio Sabbia', type: 'terra', category: MoveCategory.stato, power: 0, accuracy: 100, maxPp: 15, tier: 1),
-      Move(name: 'Terremoto', type: 'terra', category: MoveCategory.fisica, power: 100, accuracy: 100, maxPp: 10, tier: 2),
-      Move(name: 'Terra Aumentata', type: 'terra', category: MoveCategory.fisica, power: 90, accuracy: 85, maxPp: 10, tier: 3),
+    'psychic': [
+      Move(name: 'Mind Ripple', type: 'psychic', category: MoveCategory.special, power: 50, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Keen Insight', type: 'psychic', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 20, tier: 1),
+      Move(name: 'Mental Shockwave', type: 'psychic', category: MoveCategory.special, power: 80, accuracy: 100, maxPp: 10, tier: 2),
+      Move(name: 'Telekinetic Wave', type: 'psychic', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 10, tier: 3),
     ],
-    'volante': [
-      Move(name: 'Beccata', type: 'volante', category: MoveCategory.fisica, power: 35, accuracy: 100, maxPp: 35, tier: 1),
-      Move(name: 'Turbine', type: 'volante', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Acrobazia', type: 'volante', category: MoveCategory.fisica, power: 85, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Uragano', type: 'volante', category: MoveCategory.speciale, power: 110, accuracy: 70, maxPp: 10, tier: 3),
+    'rock': [
+      Move(name: 'Boulder Toss', type: 'rock', category: MoveCategory.physical, power: 50, accuracy: 90, maxPp: 15, tier: 1),
+      Move(name: 'Riverstone Tackle', type: 'rock', category: MoveCategory.physical, power: 45, accuracy: 95, maxPp: 20, tier: 1),
+      Move(name: 'Stone Cleaver', type: 'rock', category: MoveCategory.physical, power: 100, accuracy: 80, maxPp: 5, tier: 2),
+      Move(name: 'Landslide', type: 'rock', category: MoveCategory.physical, power: 75, accuracy: 90, maxPp: 10, tier: 3),
     ],
-    'psico': [
-      Move(name: 'Confusione', type: 'psico', category: MoveCategory.speciale, power: 50, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Extrasenso', type: 'psico', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 20, tier: 1),
-      Move(name: 'Psicoshock', type: 'psico', category: MoveCategory.speciale, power: 80, accuracy: 100, maxPp: 10, tier: 2),
-      Move(name: 'Psicocinesi', type: 'psico', category: MoveCategory.speciale, power: 90, accuracy: 100, maxPp: 10, tier: 3),
-    ],
-    'roccia': [
-      Move(name: 'Lancio Massi', type: 'roccia', category: MoveCategory.fisica, power: 50, accuracy: 90, maxPp: 15, tier: 1),
-      Move(name: 'Tackle Rio', type: 'roccia', category: MoveCategory.fisica, power: 45, accuracy: 95, maxPp: 20, tier: 1),
-      Move(name: 'Pietrataglio', type: 'roccia', category: MoveCategory.fisica, power: 100, accuracy: 80, maxPp: 5, tier: 2),
-      Move(name: 'Frana', type: 'roccia', category: MoveCategory.fisica, power: 75, accuracy: 90, maxPp: 10, tier: 3),
-    ],
-    'spettro': [
-      Move(name: 'Pugno Ombra', type: 'spettro', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 15, tier: 1),
-      Move(name: 'Sguardo Furtivo', type: 'spettro', category: MoveCategory.stato, power: 0, accuracy: 100, maxPp: 30, tier: 1),
-      Move(name: 'Palla Ombra', type: 'spettro', category: MoveCategory.speciale, power: 80, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: "Attacco D'Ombra", type: 'spettro', category: MoveCategory.fisica, power: 90, accuracy: 100, maxPp: 10, tier: 3),
-    ],
-    'drago': [
-      Move(name: 'Furia Draconica', type: 'drago', category: MoveCategory.speciale, power: 40, accuracy: 100, maxPp: 10, tier: 1),
-      Move(name: 'Morso', type: 'drago', category: MoveCategory.fisica, power: 60, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Danza Drago', type: 'drago', category: MoveCategory.stato, power: 0, accuracy: 100, maxPp: 20, tier: 2),
-      Move(name: 'Vampata Drago', type: 'drago', category: MoveCategory.speciale, power: 100, accuracy: 100, maxPp: 5, tier: 3),
-    ],
-    'buio': [
-      Move(name: 'Morso Rapido', type: 'buio', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 25, tier: 1),
-      Move(name: 'Sguardo Buio', type: 'buio', category: MoveCategory.stato, power: 0, accuracy: 100, maxPp: 30, tier: 1),
-      Move(name: 'Attacco Furtivo', type: 'buio', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 30, tier: 2),
-      Move(name: 'Cricca', type: 'buio', category: MoveCategory.fisica, power: 80, accuracy: 100, maxPp: 15, tier: 3),
-    ],
-    'acciaio': [
-      Move(name: "Colpo D'Acciaio", type: 'acciaio', category: MoveCategory.fisica, power: 40, accuracy: 100, maxPp: 35, tier: 1),
-      Move(name: 'Difesa Ferrea', type: 'acciaio', category: MoveCategory.stato, power: 0, accuracy: 100, maxPp: 15, tier: 1),
-      Move(name: 'Testata Di Ferro', type: 'acciaio', category: MoveCategory.fisica, power: 80, accuracy: 100, maxPp: 15, tier: 2),
-      Move(name: 'Meteorpugno', type: 'acciaio', category: MoveCategory.fisica, power: 90, accuracy: 90, maxPp: 10, tier: 3),
+    'dark': [
+      Move(name: 'Swift Bite', type: 'dark', category: MoveCategory.physical, power: 40, accuracy: 100, maxPp: 25, tier: 1),
+      Move(name: 'Shadowed Glare', type: 'dark', category: MoveCategory.status, power: 0, accuracy: 100, maxPp: 30, tier: 1),
+      Move(name: 'Sneak Strike', type: 'dark', category: MoveCategory.physical, power: 40, accuracy: 100, maxPp: 30, tier: 2),
+      Move(name: 'Grim Maw', type: 'dark', category: MoveCategory.physical, power: 80, accuracy: 100, maxPp: 15, tier: 3),
     ],
   };
 
-  /// Le 4 mosse iniziali di una creatura appena catturata: sempre
-  /// dal tier 1, sempre coerenti col suo tipo (o tipi, se già a due).
+  /// The 4 starting moves for a freshly captured Wildkin: always
+  /// from tier 1, always matching its type(s).
   List<Move> starterMoves(List<String> types, {Random? random}) {
     final rng = random ?? Random();
     final pool = <Move>[];
     for (final type in types) {
       pool.addAll(_movesOfTier(type, 1));
     }
-    // Se il pool ha meno di 4 mosse, si integra con mosse normali generiche.
-    pool.addAll(_movesOfTier('normale', 1));
+    // If the pool has fewer than 4 moves, fill in with the first
+    // type's tier-1 moves again to reach 4 candidates.
+    if (types.isNotEmpty) pool.addAll(_movesOfTier(types.first, 1));
 
     pool.shuffle(rng);
     final unique = <String, Move>{};
@@ -132,10 +106,10 @@ class MovePool {
     return unique.values.toList();
   }
 
-  /// Una mossa più forte da proporre come sostituzione, sbloccata al
-  /// livello corrente. Restituisce null se non c'è nulla di nuovo
-  /// da imparare a questo livello (si richiama ogni N livelli, la
-  /// cadenza la decide il chiamante).
+  /// A stronger move to offer as a replacement, unlocked at the
+  /// current level. Returns null if there's nothing new to learn at
+  /// this level (called every N levels; the cadence is decided by
+  /// the caller).
   Move? nextMoveToLearn({
     required List<String> types,
     required int level,

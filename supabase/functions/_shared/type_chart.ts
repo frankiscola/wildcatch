@@ -9,17 +9,17 @@ interface TypeMatchups {
 }
 
 const CHART: Record<string, TypeMatchups> = {
-  fuoco: { weakTo: ["acqua", "terra", "roccia"], resists: ["fuoco", "erba", "ghiaccio"] },
-  acqua: { weakTo: ["elettro", "erba", "ghiaccio"], resists: ["fuoco", "acqua"] },
-  elettro: { weakTo: ["terra"], resists: ["elettro", "volante"] },
-  erba: { weakTo: ["fuoco", "veleno", "volante"], resists: ["acqua", "elettro", "erba", "terra"] },
-  ghiaccio: { weakTo: ["fuoco", "volante"], resists: ["ghiaccio"] },
-  veleno: { weakTo: ["terra", "psico"], resists: ["erba", "veleno", "roccia"] },
-  terra: { weakTo: ["acqua", "erba", "ghiaccio"], resists: ["veleno", "roccia"], immuneTo: ["elettro"] },
-  volante: { weakTo: ["elettro", "ghiaccio"], immuneTo: ["terra"] },
-  psico: { weakTo: ["buio", "fuoco"], resists: ["psico", "terra"] },
-  roccia: { weakTo: ["acqua", "erba"], resists: ["fuoco", "volante"] },
-  buio: { weakTo: ["psico"], resists: ["buio"] },
+  fire: { weakTo: ["water", "ground", "rock"], resists: ["fire", "grass", "ice"] },
+  water: { weakTo: ["electric", "grass", "ice"], resists: ["fire", "water"] },
+  electric: { weakTo: ["ground"], resists: ["electric", "flying"] },
+  grass: { weakTo: ["fire", "poison", "flying"], resists: ["water", "electric", "grass", "ground"] },
+  ice: { weakTo: ["fire", "flying"], resists: ["ice"] },
+  poison: { weakTo: ["ground", "psychic"], resists: ["grass", "poison", "rock"] },
+  ground: { weakTo: ["water", "grass", "ice"], resists: ["poison", "rock"], immuneTo: ["electric"] },
+  flying: { weakTo: ["electric", "ice"], immuneTo: ["ground"] },
+  psychic: { weakTo: ["dark", "fire"], resists: ["psychic", "ground"] },
+  rock: { weakTo: ["water", "grass"], resists: ["fire", "flying"] },
+  dark: { weakTo: ["psychic"], resists: ["dark"] },
 };
 
 /// Damage multiplier for a move of type `attackType` against a target

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Sfondo con gradiente cielo + collina d'erba ondulata in basso,
-/// che richiama le schermate "overworld" di RSE con un profilo
-/// morbido invece di una linea di confine netta e squadrata.
+/// A background with a sky gradient plus a wavy grass hill at the
+/// bottom, evoking retro overworld screens with a soft outline
+/// instead of a sharp, squared border line.
 class RouteBackground extends StatelessWidget {
   final Widget child;
 
@@ -40,7 +40,7 @@ class RouteBackground extends StatelessWidget {
   }
 }
 
-/// Disegna un profilo a collina morbida invece di un rettangolo netto.
+/// Draws a soft hill outline instead of a sharp rectangle.
 class _HillClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

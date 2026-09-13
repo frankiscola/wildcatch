@@ -5,74 +5,73 @@ import 'package:image/image.dart' as img;
 import 'package:sensors_plus/sensors_plus.dart';
 import '../models/capture_context.dart';
 
-/// Implementa i meccanismi 1 e 3 del piano anti-cattura-da-internet:
+/// Implements mechanisms 1 and 3 of the anti-photo-of-a-screen plan:
 ///
-/// 1) "Cattura come scansione": analizza un burst di frame ravvicinati
-///    e misura quanto le diverse zone dell'immagine si sono spostate
-///    in modo DISOMOGENEO tra un frame e l'altro (parallasse). Una
-///    scena 3D reale, anche con un tremore minimo della mano, mostra
-///    sempre un po' di parallasse fra primo piano e sfondo. Una
-///    superficie piatta (foto, schermo, pagina di rivista) semplicemente
-///    ripresa due volte si sposta in blocco, in modo quasi uniforme:
-///    parallasse vicina a zero.
+/// 1) "Capture as a scan": analyzes a burst of closely spaced frames
+///    and measures how UNEVENLY different areas of the image shifted
+///    from one frame to the next (parallax). A real 3D scene, even
+///    with minimal hand tremor, always shows a bit of parallax
+///    between foreground and background. A flat surface (a photo, a
+///    screen, a magazine page) simply re-shot twice moves as a block,
+///    almost uniformly: parallax near zero.
 ///
-/// 3) "Poor man's AR": invece di integrare un intero SDK AR (ARCore/
-///    ARKit — troppo pesante e rischioso da aggiungere senza poterlo
-///    testare su device reali), campioniamo il giroscopio durante la
-///    stessa finestra di cattura e richiediamo che il telefono si sia
-///    DAVVERO mosso un minimo. Se il giroscopio segnala movimento ma i
-///    frame non mostrano parallasse (o viceversa: frame "mossi" ma
-///    giroscopio fermo, segno che il movimento è nell'inquadratura e
-///    non nella mano) scatta un'incoerenza sospetta.
+/// 3) "Poor man's AR": instead of integrating a full AR SDK (ARCore/
+///    ARKit — too heavy and risky to add without a real device to
+///    test on), we sample the gyroscope during the same capture
+///    window and require that the phone REALLY moved at least a
+///    little. If the gyroscope reports movement but the frames show
+///    no parallax (or vice versa: "moved" frames but a still
+///    gyroscope, a sign the movement is in the frame and not in the
+///    hand), a suspicious inconsistency is flagged.
 ///
-/// IMPORTANTE: questo è un segnale calcolato lato client, quindi in
-/// teoria falsificabile da un client manomesso. Per questo va sempre
-/// trattato come un indizio (utile per bloccare il 95% dei casi
-/// pigri/casuali) e MAI come unica difesa: la barriera davvero robusta
-/// resta il doppio avvistamento verificato server-side (meccanismo 5,
-/// vedi supabase/functions/resolve-sighting).
+/// IMPORTANT: this is a client-computed signal, so in theory it can
+/// be faked by a tampered client. It should therefore always be
+/// treated as a clue (useful for blocking 95% of lazy/casual cases)
+/// and NEVER as the sole defense: the truly robust barrier remains
+/// the server-side-verified double sighting (mechanism 5, see
+/// supabase/functions/resolve-sighting).
 class LivenessService {
-  /// Dimensione (in blocchi per lato) della griglia usata per il
-  /// confronto tra frame. Una griglia 3x3 è un buon compromesso fra
-  /// sensibilità alla parallasse e costo di calcolo su un telefono.
+  /// Size (in blocks per side) of the grid used to compare frames. A
+  /// 3x3 grid is a good compromise between sensitivity to parallax
+  /// and compute cost on a phone.
   static const int _gridSize = 3;
 
-  /// Lato (in pixel) a cui viene ridotto ogni frame prima del
-  /// confronto: non serve lavorare a piena risoluzione per stimare
-  /// il movimento, e farlo su un'immagine piccola è molto più veloce.
+  /// Side length (in pixels) each frame is downscaled to before
+  /// comparison: there's no need to work at full resolution to
+  /// estimate motion, and doing it on a small image is much faster.
   static const int _analysisSize = 180;
 
-  /// Ampiezza massima (in pixel, sull'immagine ridotta) della finestra
-  /// di ricerca per il block-matching. Valori più alti = tollera
-  /// spostamenti maggiori ma costa di più calcolarli.
+  /// Max size (in pixels, on the downscaled image) of the search
+  /// window for block-matching. Higher values = tolerates larger
+  /// displacements but costs more to compute.
   static const int _searchRadius = 6;
 
   StreamSubscription<GyroscopeEvent>? _gyroSub;
   double _gyroIntegral = 0;
 
-  /// Va chiamato subito PRIMA di CameraCaptureService.captureBurst().
+  /// Must be called right BEFORE CameraCaptureService.captureBurst().
   void startGyroSampling() {
     _gyroIntegral = 0;
     _gyroSub?.cancel();
     _gyroSub = gyroscopeEvents.listen((event) {
-      // Modulo del vettore di velocità angolare (rad/s), integrato
-      // "a scatti" sull'intervallo tra eventi: una stima grezza ma
-      // sufficiente a distinguere "telefono in mano" da "telefono
-      // fermo su un cavalletto/appoggiato su un tavolo".
+      // Magnitude of the angular velocity vector (rad/s), integrated
+      // "in ticks" over the interval between events: a rough but
+      // sufficient estimate to tell "phone in hand" apart from
+      // "phone still on a tripod/resting on a table".
       final magnitude = sqrt(
         event.x * event.x + event.y * event.y + event.z * event.z,
       );
       _gyroIntegral += magnitude;
     }, onError: (_) {
-      // Alcuni device Android non hanno il giroscopio: degradiamo
-      // in silenzio, il segnale resterà semplicemente a 0 (motion
-      // "non misurabile" invece di "sospetto").
+      // Some Android devices have no gyroscope: we degrade silently,
+      // the signal will simply stay at 0 (motion "not measurable"
+      // rather than "suspicious").
     }, cancelOnError: true);
   }
 
-  /// Va chiamato subito DOPO CameraCaptureService.captureBurst(),
-  /// passando i frame appena catturati. Ferma il campionamento del
-  /// giroscopio e produce il report completo.
+  /// Must be called right AFTER CameraCaptureService.captureBurst(),
+  /// passing the frames that were just captured. Stops gyroscope
+  /// sampling and produces the full report.
   Future<LivenessReport> finishAndAnalyze(List<Uint8List> frames) async {
     await _gyroSub?.cancel();
     _gyroSub = null;
@@ -80,15 +79,15 @@ class LivenessService {
 
     final parallax = _analyzeParallax(frames);
 
-    // Euristica di verdetto: se la mano ha prodotto pochissimo
-    // movimento del telefono E i frame non mostrano parallasse
-    // significativa, la spiegazione più probabile è che si stia
-    // fotografando qualcosa di piatto e immobile (schermo/stampa)
-    // invece di un animale reale. Soglie di partenza, da ricalibrare
-    // con dati reali raccolti in test su device.
-    const gyroThreshold = 0.35; // rad accumulati, indicativo
-    const parallaxThreshold = 0.15; // adimensionale, vedi _analyzeParallax
-    const totalMotionFloor = 0.02; // sotto: frame praticamente identici
+    // Verdict heuristic: if the hand produced very little phone
+    // movement AND the frames show no significant parallax, the most
+    // likely explanation is that a flat, motionless subject
+    // (screen/print) is being photographed instead of a real animal.
+    // Starting thresholds, to be re-tuned with real data collected
+    // from device testing.
+    const gyroThreshold = 0.35; // accumulated radians, indicative
+    const parallaxThreshold = 0.15; // dimensionless, see _analyzeParallax
+    const totalMotionFloor = 0.02; // below this: frames are practically identical
 
     final tooStill = parallax.totalMotion < totalMotionFloor;
     final noParallaxDespiteMotion =
@@ -104,8 +103,8 @@ class LivenessService {
     );
   }
 
-  /// Da chiamare se l'utente annulla la cattura, per non lasciare
-  /// listener del giroscopio attivi in background.
+  /// Call this if the player cancels the capture, so no gyroscope
+  /// listener is left running in the background.
   void cancel() {
     _gyroSub?.cancel();
     _gyroSub = null;
@@ -129,15 +128,15 @@ class LivenessService {
         .toList();
 
     if (decoded.length < 2) {
-      // Decodifica fallita per qualche frame: non blocchiamo la
-      // cattura per questo, semplicemente non abbiamo un segnale.
+      // Decoding failed for some frame: we don't block the capture
+      // over this, we simply don't have a signal.
       return const _ParallaxResult(varianceScore: 0, totalMotion: 0);
     }
 
-    // Confrontiamo il primo e l'ultimo frame del burst: è la coppia
-    // con la baseline temporale più ampia, quindi quella in cui un
-    // eventuale tremore naturale ha avuto più tempo per produrre
-    // parallasse misurabile.
+    // We compare the first and last frame of the burst: it's the
+    // pair with the widest time baseline, so the one where any
+    // natural hand tremor had the most time to produce measurable
+    // parallax.
     final first = decoded.first;
     final last = decoded.last;
 
@@ -164,12 +163,12 @@ class LivenessService {
 
     totalMotion /= displacements.length;
 
-    // Varianza delle direzioni/ampiezze di spostamento tra i blocchi:
-    // alta se i blocchi si muovono in modo diverso tra loro (parallasse
-    // reale), vicina a zero se si muovono tutti insieme (traslazione
-    // rigida di un piano). Normalizziamo sulla dimensione dell'immagine
-    // per ottenere un punteggio comparabile indipendentemente dalla
-    // risoluzione di analisi scelta.
+    // Variance of the displacement directions/magnitudes across
+    // blocks: high if the blocks move differently from each other
+    // (real parallax), close to zero if they all move together
+    // (rigid translation of a plane). We normalize by the analysis
+    // size to get a score comparable regardless of the chosen
+    // analysis resolution.
     final meanX = displacements.map((d) => d.dx).reduce((a, b) => a + b) / displacements.length;
     final meanY = displacements.map((d) => d.dy).reduce((a, b) => a + b) / displacements.length;
 
@@ -188,10 +187,10 @@ class LivenessService {
     );
   }
 
-  /// Block-matching grezzo (SAD, sum of absolute differences) su una
-  /// piccola finestra di ricerca. Sufficiente per stimare uno
-  /// spostamento approssimativo per blocco senza bisogno di librerie
-  /// di optical flow dedicate.
+  /// Rough block-matching (SAD, sum of absolute differences) over a
+  /// small search window. Good enough to estimate an approximate
+  /// per-block displacement without needing dedicated optical-flow
+  /// libraries.
   _Vector2 _bestMatch({
     required List<int> reference,
     required List<int> target,
@@ -238,9 +237,9 @@ class LivenessService {
     var sum = 0;
     var samples = 0;
 
-    // Campioniamo con un passo di 2px invece di ogni pixel: per una
-    // stima di movimento approssimata è più che sufficiente e riduce
-    // il costo di ~4x.
+    // We sample with a 2px step instead of every pixel: more than
+    // enough for an approximate motion estimate, and it cuts the
+    // cost by ~4x.
     for (var y = 0; y < blockSize; y += 2) {
       final refY = originY + y;
       final tgtY = refY + offsetY;
@@ -267,7 +266,7 @@ class LivenessService {
     for (var y = 0; y < _analysisSize; y++) {
       for (var x = 0; x < _analysisSize; x++) {
         final pixel = image.getPixel(x, y);
-        // Luminanza percettiva approssimata (Rec. 601).
+        // Approximate perceptual luminance (Rec. 601).
         final gray = (0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b).round();
         buffer[y * _analysisSize + x] = gray;
       }

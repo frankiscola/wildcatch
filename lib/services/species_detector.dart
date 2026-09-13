@@ -2,13 +2,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
-/// Riconosce l'animale in una foto usando Google ML Kit Image
-/// Labeling: gira interamente sul dispositivo, gratuito, nessuna
-/// chiamata di rete né API key. Il modello è generico (non
-/// specializzato in animali), quindi le etichette sono in inglese
-/// e piuttosto ampie ("Cat", "Dog", "Bird"...) — le traduciamo e
-/// semplifichiamo qui in un piccolo dizionario, con fallback
-/// sull'etichetta originale se non la conosciamo.
+/// Recognizes the animal in a photo using Google ML Kit Image
+/// Labeling: runs entirely on-device, free, no network call or API
+/// key needed. The model is generic (not animal-specialized), so
+/// labels are broad English words ("Cat", "Dog", "Bird"...) — we
+/// just lowercase/trim them here for consistent use downstream.
 class SpeciesDetector {
   final ImageLabeler _labeler;
 
@@ -17,9 +15,9 @@ class SpeciesDetector {
           options: ImageLabelerOptions(confidenceThreshold: 0.5),
         );
 
-  /// Ritorna il nome (in italiano se lo conosciamo) dell'animale con
-  /// confidenza più alta, o null se il modello non riconosce nulla
-  /// sopra la soglia di confidenza.
+  /// Returns the name of the highest-confidence animal label, or
+  /// null if the model doesn't recognize anything above the
+  /// confidence threshold.
   Future<String?> detectFromFile(File file) async {
     try {
       final inputImage = InputImage.fromFile(file);
@@ -27,23 +25,23 @@ class SpeciesDetector {
       if (labels.isEmpty) return null;
 
       labels.sort((a, b) => b.confidence.compareTo(a.confidence));
-      return _translate(labels.first.label);
+      return _clean(labels.first.label);
     } catch (e) {
-      // Non deve mai bloccare la cattura: se il modello fallisce,
-      // si procede senza suggerimento di specie.
+      // Should never block the capture flow: if the model fails, we
+      // just proceed without a species hint.
       return null;
     }
   }
 
-  /// Come [detectFromFile], ma per byte già in memoria (i frame del
-  /// burst catturato da CameraCaptureService non passano più da un
-  /// XFile scelto con ImagePicker). ML Kit su questa versione vuole
-  /// un path su disco, quindi scriviamo un file temporaneo usa-e-getta.
+  /// Same as [detectFromFile], but for bytes already in memory (the
+  /// burst frames from CameraCaptureService no longer come from an
+  /// XFile picked via ImagePicker). ML Kit in this version needs a
+  /// path on disk, so we write a disposable temp file.
   Future<String?> detectFromBytes(Uint8List bytes) async {
     File? tempFile;
     try {
       tempFile = await File(
-        '${Directory.systemTemp.path}/wildcatch_species_${DateTime.now().microsecondsSinceEpoch}.jpg',
+        '${Directory.systemTemp.path}/wildkin_species_${DateTime.now().microsecondsSinceEpoch}.jpg',
       ).create();
       await tempFile.writeAsBytes(bytes);
       return await detectFromFile(tempFile);
@@ -58,41 +56,5 @@ class SpeciesDetector {
 
   void dispose() => _labeler.close();
 
-  static const Map<String, String> _translations = {
-    'cat': 'gatto',
-    'dog': 'cane',
-    'bird': 'uccello',
-    'pigeon': 'piccione',
-    'seagull': 'gabbiano',
-    'duck': 'anatra',
-    'goose': 'oca',
-    'owl': 'gufo',
-    'squirrel': 'scoiattolo',
-    'rabbit': 'coniglio',
-    'hamster': 'criceto',
-    'horse': 'cavallo',
-    'fish': 'pesce',
-    'goldfish': 'pesce rosso',
-    'butterfly': 'farfalla',
-    'insect': 'insetto',
-    'bee': 'ape',
-    'ladybug': 'coccinella',
-    'turtle': 'tartaruga',
-    'lizard': 'lucertola',
-    'frog': 'rana',
-    'snake': 'serpente',
-    'sheep': 'pecora',
-    'cow': 'mucca',
-    'goat': 'capra',
-    'chicken': 'gallina',
-    'mouse': 'topo',
-    'hedgehog': 'riccio',
-    'deer': 'cervo',
-    'fox': 'volpe',
-  };
-
-  String _translate(String label) {
-    final key = label.toLowerCase().trim();
-    return _translations[key] ?? key;
-  }
+  String _clean(String label) => label.toLowerCase().trim();
 }

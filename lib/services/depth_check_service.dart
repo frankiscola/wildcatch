@@ -1,54 +1,51 @@
 import 'package:flutter/services.dart';
 
-/// Meccanismo 2 del piano anti-cattura-da-internet: verifica di
-/// profondità reale.
+/// Mechanism 2 of the anti-photo-of-a-screen plan: real depth check.
 ///
-/// STATO ATTUALE: scaffold, NON implementato lato nativo.
+/// CURRENT STATE: scaffold, NOT implemented natively yet.
 ///
-/// Molti telefoni espongono una mappa di profondità della scena
-/// (LiDAR/TrueDepth su iOS via AVDepthData, dual-camera stereo o
-/// ToF su Android via il flusso ImageFormat.DEPTH16 di Camera2).
-/// Se la profondità nella zona centrale dell'inquadratura è quasi
-/// costante, la scena è quasi certamente un piano piatto (schermo,
-/// foto stampata) invece di un animale reale a distanza variabile
-/// dallo sfondo.
+/// Many phones expose a depth map of the scene (LiDAR/TrueDepth on
+/// iOS via AVDepthData, dual-camera stereo or ToF on Android via
+/// Camera2's ImageFormat.DEPTH16 stream). If the depth in the center
+/// of the frame is nearly constant, the scene is almost certainly a
+/// flat plane (a screen, a printed photo) rather than a real animal
+/// at a varying distance from the background.
 ///
-/// Implementarlo per bene richiede codice nativo Swift/Kotlin che
-/// non posso scrivere "alla cieca" senza un device per testarlo: un
-/// bug qui non darebbe un errore di compilazione ma un semplice
-/// "funziona sempre/non funziona mai", difficile da notare prima di
-/// spedire l'app. Per questo il servizio è scritto per degradare in
-/// modo esplicito ed essere SEMPRE opzionale: se il canale nativo non
-/// risponde, il resto della pipeline (mosse 1, 3, 4, 5) continua a
-/// funzionare esattamente come se questo segnale non esistesse.
+/// Implementing this properly requires native Swift/Kotlin code that
+/// can't be written "blind" without a device to test on: a bug here
+/// wouldn't cause a compile error, just "always works/never works",
+/// hard to notice before shipping the app. That's why this service
+/// is written to fail explicitly and stay ALWAYS optional: if the
+/// native channel doesn't respond, the rest of the pipeline (checks
+/// 1, 3, 4, 5) keeps working exactly as if this signal didn't exist.
 ///
-/// Per attivarlo davvero in futuro:
-///  - iOS: implementare in AppDelegate.swift un MethodChannel che usa
-///    AVCaptureDepthDataOutput per leggere la varianza di profondità
-///    al centro del frame durante lo scatto.
-///  - Android: implementare in MainActivity.kt un MethodChannel che
-///    usa Camera2 (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
-///    + uno stream ImageFormat.DEPTH16, se il device lo supporta) per
-///    calcolare la stessa varianza.
-/// In entrambi i casi il canale deve rispondere con `null` (non con
-/// un valore finto) sui device che non hanno hardware di profondità.
+/// To actually enable it in the future:
+///  - iOS: implement a MethodChannel in AppDelegate.swift that uses
+///    AVCaptureDepthDataOutput to read the depth variance at the
+///    center of the frame during capture.
+///  - Android: implement a MethodChannel in MainActivity.kt that
+///    uses Camera2 (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
+///    + an ImageFormat.DEPTH16 stream, if the device supports it) to
+///    compute the same variance.
+/// In both cases the channel must respond with `null` (not a fake
+/// value) on devices that have no depth hardware.
 class DepthCheckService {
-  static const _channel = MethodChannel('wildcatch/depth');
+  static const _channel = MethodChannel('wildkin/depth');
 
-  /// Ritorna la varianza di profondità stimata al centro
-  /// dell'inquadratura, oppure `null` se il device/la piattaforma non
-  /// espone questo dato (caso atteso oggi, su OGNI device, finché il
-  /// canale nativo non viene implementato).
+  /// Returns the estimated depth variance at the center of the
+  /// frame, or `null` if the device/platform doesn't expose this
+  /// data (the expected case today, on EVERY device, until the
+  /// native channel is implemented).
   ///
-  /// Un valore vicino a 0 = superficie piatta rilevata (sospetto).
-  /// Un valore alto = profondità variabile = scena 3D reale.
+  /// A value near 0 = a flat surface was detected (suspicious).
+  /// A high value = varying depth = a real 3D scene.
   Future<double?> sampleCenterDepthVariance() async {
     try {
       final result = await _channel.invokeMethod<double>('sampleCenterDepthVariance');
       return result;
     } on MissingPluginException {
-      // Atteso finché non si scrive il codice nativo: nessun errore
-      // da mostrare all'utente, semplicemente "segnale non disponibile".
+      // Expected until the native code is written: no error to show
+      // the user, just "signal not available".
       return null;
     } on PlatformException {
       return null;

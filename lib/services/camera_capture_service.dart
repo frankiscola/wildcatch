@@ -1,19 +1,19 @@
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 
-/// Incapsula l'uso della fotocamera LIVE del dispositivo.
+/// Wraps use of the device's LIVE camera.
 ///
-/// IMPORTANTE: questa è ora l'UNICA via per fornire una foto alla
-/// cattura. Non esiste più, da nessuna parte nella UI, un pulsante
-/// "scegli dalla galleria": è il prerequisito fondamentale di tutto
-/// il resto del piano anti-cattura-da-internet (vedi liveness_service
-/// e supabase/functions/resolve-sighting) — senza questo vincolo,
-/// chiunque potrebbe semplicemente aggirare ogni controllo scegliendo
-/// una foto già pronta invece di scattarne una dal vivo.
+/// IMPORTANT: this is now the ONLY way to provide a photo for a
+/// capture. There's no longer, anywhere in the UI, a "choose from
+/// gallery" button: that's the fundamental prerequisite for the rest
+/// of the anti-photo-of-a-screen plan (see liveness_service and
+/// supabase/functions/resolve-sighting) — without this constraint,
+/// anyone could simply bypass every check by picking an already-made
+/// photo instead of taking a live one.
 ///
-/// `image_picker` resta nel pubspec solo come dipendenza transitiva di
-/// altri package; non va più usato con `ImageSource.gallery` in nessun
-/// punto dell'app.
+/// `image_picker` stays in the pubspec only as a transitive
+/// dependency of other packages; it must no longer be used with
+/// `ImageSource.gallery` anywhere in the app.
 class CameraCaptureService {
   CameraController? _controller;
   List<CameraDescription> _cameras = const [];
@@ -23,7 +23,7 @@ class CameraCaptureService {
   CameraController get controller {
     final c = _controller;
     if (c == null) {
-      throw StateError('CameraCaptureService non inizializzato: chiama initialize() prima.');
+      throw StateError('CameraCaptureService not initialized: call initialize() first.');
     }
     return c;
   }
@@ -33,7 +33,7 @@ class CameraCaptureService {
 
     _cameras = await availableCameras();
     if (_cameras.isEmpty) {
-      throw CameraCaptureException('Nessuna fotocamera disponibile su questo dispositivo.');
+      throw CameraCaptureException('No camera available on this device.');
     }
 
     final back = _cameras.firstWhere(
@@ -52,28 +52,28 @@ class CameraCaptureService {
     _controller = controller;
   }
 
-  /// Scatta [frameCount] foto a distanza di [interval] l'una
-  /// dall'altra, restituendole in ordine cronologico.
+  /// Takes [frameCount] photos spaced [interval] apart, returning
+  /// them in chronological order.
   ///
-  /// Questo burst è la materia prima sia del punteggio di parallasse
-  /// (LivenessService.analyzeParallax) sia della finestra temporale
-  /// durante cui si campiona il giroscopio (LivenessService inizia a
-  /// campionare subito prima di chiamare questo metodo e si ferma
-  /// subito dopo: vedi CaptureFlowNotifier).
+  /// This burst is the raw material for both the parallax score
+  /// (LivenessService.analyzeParallax) and the time window during
+  /// which the gyroscope is sampled (LivenessService starts sampling
+  /// right before calling this method and stops right after: see
+  /// CaptureFlowNotifier).
   ///
-  /// Nota pratica: 3 frame con ~350ms di distanza sono un buon
-  /// compromesso fra "abbastanza tempo perché il tremore naturale
-  /// della mano produca parallasse" e "non far sembrare la cattura
-  /// lenta all'utente". Va ricalibrato provando su device reali.
+  /// Practical note: 3 frames ~350ms apart is a good compromise
+  /// between "enough time for natural hand tremor to produce
+  /// parallax" and "not making the capture feel slow to the player".
+  /// Should be re-tuned by testing on real devices.
   Future<List<Uint8List>> captureBurst({
     int frameCount = 3,
     Duration interval = const Duration(milliseconds: 350),
   }) async {
     if (!isInitialized) {
-      throw StateError('CameraCaptureService non inizializzato.');
+      throw StateError('CameraCaptureService not initialized.');
     }
     if (frameCount < 2) {
-      throw ArgumentError('Servono almeno 2 frame per calcolare la parallasse.');
+      throw ArgumentError('At least 2 frames are needed to compute parallax.');
     }
 
     final frames = <Uint8List>[];

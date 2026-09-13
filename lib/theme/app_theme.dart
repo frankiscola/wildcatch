@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Font "titolo": rotondo, giocoso, in stile menu di Ruby/Sapphire/
-/// Emerald — non un font pixel 8-bit, ma qualcosa di morbido e
-/// leggibile che comunque "sa di videogioco".
-/// Font "corpo": più discorsivo, usato nei dialog box e nei testi lunghi.
+/// "Title" font: rounded, playful, retro menu style — not an 8-bit
+/// pixel font, but something soft and readable that still "feels
+/// like a game".
+/// "Body" font: more conversational, used in dialog boxes and longer text.
 ///
-/// Il nome del metodo è rimasto `pixelTitle` per non dover toccare
-/// tutti i punti in cui viene già richiamato nell'app: concettualmente
-/// ora indica semplicemente "il font dei titoli/UI", non più pixel.
+/// The method is still called `pixelTitle` to avoid touching every
+/// place in the app that already calls it: conceptually it now just
+/// means "the titles/UI font", no longer literally pixel-styled.
 class AppFonts {
   AppFonts._();
 
@@ -39,8 +39,8 @@ class AppTheme {
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.routeSkyBottom,
       colorScheme: base.colorScheme.copyWith(
-        primary: AppColors.sapphireBlue,
-        secondary: AppColors.rubyRed,
+        primary: AppColors.tidalBlue,
+        secondary: AppColors.emberRed,
         surface: AppColors.panelCream,
       ),
       textTheme: base.textTheme.apply(

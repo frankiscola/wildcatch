@@ -1,51 +1,52 @@
-/// Categoria qualitativa mostrata al giocatore al posto del livello
-/// esatto di evoluzione, per mantenere un po' di suspense.
-enum EvolutionTiming { precoce, media, tardiva }
+/// Qualitative category shown to the player instead of the exact
+/// evolution level, to keep a bit of suspense.
+enum EvolutionTiming { early, average, late }
 
-/// Range di livello (min/max). Usiamo un record con campi NOMINATI
-/// (sintassi `{int min, int max}` tra graffe): è importante scrivere
-/// il tipo così ovunque venga usato, perché un record posizionale
-/// `(int min, int max)` (senza graffe) è un tipo diverso — i nomi in
-/// quel caso sono solo documentazione e `.min`/`.max` non esistono.
+/// Level range (min/max). We use a record with NAMED fields
+/// (the `{int min, int max}` curly-brace syntax): it's important to
+/// write the type this way everywhere it's used, because a
+/// positional record `(int min, int max)` (without braces) is a
+/// different type — the names in that case are just documentation
+/// and `.min`/`.max` don't exist.
 typedef LevelRange = ({int min, int max});
 
-/// Unica fonte di verità per i range di livello a cui possono
-/// avvenire i salti evolutivi. Definiti qui (nel modello) e riusati
-/// sia da [EvolutionPlan.timingHint] sia da `EvolutionEngine`, così
-/// da non poterli mai desincronizzare tra loro.
+/// Single source of truth for the level ranges at which evolution
+/// jumps can happen. Defined here (in the model) and reused by both
+/// [EvolutionPlan.timingHint] and `EvolutionEngine`, so they can
+/// never drift out of sync with each other.
 class EvolutionRanges {
   EvolutionRanges._();
 
-  /// Primo salto di una linea a 3 stadi (base -> stadio 2).
+  /// First jump of a 3-stage line (base -> stage 2).
   static const LevelRange firstJumpOfThreeStage = (min: 15, max: 30);
 
-  /// Secondo salto di una linea a 3 stadi (stadio 2 -> stadio 3).
+  /// Second jump of a 3-stage line (stage 2 -> stage 3).
   static const LevelRange secondJumpOfThreeStage = (min: 30, max: 50);
 
-  /// Unico salto di una linea a 2 stadi (base -> evoluzione).
+  /// Only jump of a 2-stage line (base -> evolution).
   static const LevelRange onlyJumpOfTwoStage = (min: 30, max: 50);
 }
 
-/// Il "destino" evolutivo di una creatura, deciso (in parte
-/// casualmente) al momento della cattura e mai mostrato per intero:
-/// il giocatore vede solo [totalStages] e un indizio qualitativo
-/// sulla vicinanza della prossima evoluzione, non i livelli esatti.
+/// A Wildkin's evolutionary "fate", decided (partly at random) at
+/// capture time and never fully revealed: the player only sees
+/// [totalStages] and a qualitative hint about how close the next
+/// evolution is, never the exact levels.
 class EvolutionPlan {
-  /// 2 = un solo stadio successivo (base -> evoluzione).
-  /// 3 = due stadi successivi (base -> stadio 2 -> stadio 3).
+  /// 2 = a single following stage (base -> evolution).
+  /// 3 = two following stages (base -> stage 2 -> stage 3).
   final int totalStages;
 
-  /// Stadio attuale, 1-based (1 = forma base appena catturata).
+  /// Current stage, 1-based (1 = base form, just captured).
   final int currentStage;
 
-  /// Livello a cui avverrà la prossima evoluzione. Null se la
-  /// creatura ha già raggiunto lo stadio finale.
+  /// Level at which the next evolution will happen. Null if the
+  /// Wildkin has already reached its final stage.
   final int? nextEvolutionLevel;
 
-  /// Livello a cui avverrà l'evoluzione successiva alla prossima
-  /// (rilevante solo per le linee a 3 stadi, quando si è ancora
-  /// allo stadio 1). Serve per calcolare l'indizio del secondo salto
-  /// senza doverlo rigenerare al momento della prima evoluzione.
+  /// Level at which the evolution *after* the next one will happen
+  /// (only relevant for 3-stage lines, while still at stage 1).
+  /// Used to compute the second jump's hint without having to
+  /// regenerate it at the moment of the first evolution.
   final int? secondEvolutionLevel;
 
   const EvolutionPlan({
@@ -57,9 +58,9 @@ class EvolutionPlan {
 
   bool get isFinalStage => currentStage >= totalStages;
 
-  /// Indizio qualitativo sulla prossima evoluzione, calcolato in
-  /// base a dove cade [nextEvolutionLevel] nel range possibile per
-  /// lo stadio corrente. Non rivela mai il numero esatto.
+  /// Qualitative hint about the next evolution, computed from where
+  /// [nextEvolutionLevel] falls within the possible range for the
+  /// current stage. Never reveals the exact number.
   EvolutionTiming? timingHint() {
     final level = nextEvolutionLevel;
     if (level == null) return null;
@@ -71,23 +72,23 @@ class EvolutionPlan {
     final span = range.max - range.min;
     final position = (level - range.min) / span;
 
-    if (position <= 0.33) return EvolutionTiming.precoce;
-    if (position <= 0.66) return EvolutionTiming.media;
-    return EvolutionTiming.tardiva;
+    if (position <= 0.33) return EvolutionTiming.early;
+    if (position <= 0.66) return EvolutionTiming.average;
+    return EvolutionTiming.late;
   }
 
   String timingLabel() {
     switch (timingHint()) {
-      case EvolutionTiming.precoce:
-        return 'Sembra pronto a evolversi presto';
-      case EvolutionTiming.media:
-        return 'Evolverà con un allenamento nella media';
-      case EvolutionTiming.tardiva:
-        return 'Ci vorrà parecchio allenamento prima che evolva';
+      case EvolutionTiming.early:
+        return 'Looks ready to evolve soon';
+      case EvolutionTiming.average:
+        return 'Will evolve with an average amount of training';
+      case EvolutionTiming.late:
+        return 'It will take a lot of training before it evolves';
       case null:
         return isFinalStage
-            ? 'Ha raggiunto la sua forma finale'
-            : 'Il suo destino evolutivo è un mistero';
+            ? 'It has reached its final form'
+            : 'Its evolutionary fate is a mystery';
     }
   }
 

@@ -1,74 +1,76 @@
 import 'dart:math';
 
-/// Compone un nome in stile Pokemon fondendo la specie rilevata
-/// dalla foto (es. "gatto") con il tipo elementale assegnato alla
-/// creatura (es. "fuoco"), con la stessa logica dei nomi portmanteau
-/// dei giochi originali (Char + Salamander = Charmander).
+/// Builds a name by blending the detected species from the photo
+/// (e.g. "cat") with the elemental type assigned to the Wildkin
+/// (e.g. "fire"), using the same portmanteau idea as classic
+/// monster-collecting RPGs (e.g. Char + Salamander = Charmander) —
+/// with wording of our own, not borrowed from any existing game.
 ///
-/// Puramente basato su regole/liste di frammenti: nessuna chiamata
-/// esterna, nessun costo, risultato immediato.
+/// Purely rule/list based: no external calls, no cost, instant result.
 class NameGenerator {
   final Random _random;
 
   NameGenerator({Random? random}) : _random = random ?? Random();
 
-  // Frammenti "prima del nome" (prefissi) e "dopo il nome" (suffissi)
-  // evocativi di ciascun tipo. Se un tipo non è in lista si usa
-  // 'normale' come fallback.
+  // "Before the name" (prefix) and "after the name" (suffix)
+  // fragments evocative of each type. If a type isn't in the list,
+  // 'normal' is used as a fallback.
   static const Map<String, List<String>> _prefixes = {
-    'fuoco': ['Piro', 'Brace', 'Infer', 'Ember'],
-    'acqua': ['Idro', 'Aqua', 'Marea', 'Onda'],
-    'erba': ['Fillo', 'Verde', 'Clorofil', 'Rampi'],
-    'elettro': ['Volt', 'Elettro', 'Fulmo', 'Ampe'],
-    'ghiaccio': ['Crio', 'Gelo', 'Brina', 'Glacio'],
-    'lotta': ['Furio', 'Pugno', 'Marzia', 'Rissa'],
-    'veleno': ['Tossi', 'Veleno', 'Acido', 'Bava'],
-    'terra': ['Terra', 'Argil', 'Sabbio', 'Geo'],
-    'volante': ['Aero', 'Piuma', 'Vento', 'Ali'],
-    'psico': ['Psiche', 'Mente', 'Onir', 'Telepa'],
-    'roccia': ['Roccia', 'Petra', 'Basalt', 'Silice'],
-    'spettro': ['Spettro', 'Ombra', 'Fantasma', 'Etere'],
-    'drago': ['Draco', 'Wyrm', 'Squama', 'Rettil'],
-    'buio': ['Ombra', 'Notte', 'Oscuro', 'Tenebra'],
-    'acciaio': ['Ferro', 'Metal', 'Lega', 'Corazza'],
-    'normale': ['Comu', 'Vaga', 'Terr', 'Selva'],
+    'fire': ['Pyro', 'Ember', 'Blaze', 'Cinder'],
+    'water': ['Hydro', 'Aqua', 'Tide', 'Wave'],
+    'grass': ['Flora', 'Verdi', 'Chloro', 'Bramble'],
+    'electric': ['Volt', 'Spark', 'Amp', 'Static'],
+    'ice': ['Cryo', 'Frost', 'Rime', 'Glacia'],
+    'fighting': ['Fury', 'Brawn', 'Rally', 'Scrap'],
+    'poison': ['Toxi', 'Venom', 'Acid', 'Blight'],
+    'ground': ['Terra', 'Clay', 'Dune', 'Geo'],
+    'flying': ['Aero', 'Plume', 'Gale', 'Wing'],
+    'psychic': ['Psy', 'Mind', 'Dream', 'Aura'],
+    'bug': ['Chit', 'Antenn', 'Larv', 'Elytra'],
+    'rock': ['Boulder', 'Petra', 'Basalt', 'Flint'],
+    'ghost': ['Spectr', 'Shade', 'Phantom', 'Ether'],
+    'dragon': ['Draco', 'Wyrm', 'Scale', 'Fang'],
+    'dark': ['Umbra', 'Night', 'Murk', 'Gloom'],
+    'steel': ['Iron', 'Metal', 'Alloy', 'Plate'],
+    'normal': ['Common', 'Rover', 'Field', 'Wild'],
   };
 
   static const Map<String, List<String>> _suffixes = {
-    'fuoco': ['ardente', 'fiamma', 'brace', 'ustio'],
-    'acqua': ['acqua', 'onda', 'marino', 'fluido'],
-    'erba': ['foglia', 'rampicante', 'fiore', 'verde'],
-    'elettro': ['volt', 'scarica', 'elettro', 'ampere'],
-    'ghiaccio': ['gelo', 'glacio', 'brina', 'cristallo'],
-    'lotta': ['pugno', 'colpo', 'furia', 'forza'],
-    'veleno': ['veleno', 'tossina', 'bava', 'acido'],
-    'terra': ['terra', 'sabbia', 'argilla', 'roccioso'],
-    'volante': ['ali', 'piuma', 'vento', 'volo'],
-    'psico': ['mente', 'psiche', 'sogno', 'aura'],
-    'roccia': ['roccia', 'pietra', 'basalto', 'selce'],
-    'spettro': ['ombra', 'spettro', 'fantasma', 'etere'],
-    'drago': ['drago', 'squama', 'wyrm', 'fauci'],
-    'buio': ['ombra', 'notte', 'tenebra', 'oscurità'],
-    'acciaio': ['ferro', 'acciaio', 'corazza', 'lega'],
-    'normale': ['selvatico', 'comune', 'vagante', 'libero'],
+    'fire': ['blaze', 'ember', 'scorch', 'flare'],
+    'water': ['tide', 'wave', 'brook', 'flow'],
+    'grass': ['leaf', 'vine', 'bloom', 'moss'],
+    'electric': ['volt', 'surge', 'amp', 'spark'],
+    'ice': ['frost', 'rime', 'chill', 'crystal'],
+    'fighting': ['fist', 'strike', 'fury', 'force'],
+    'poison': ['venom', 'toxin', 'blight', 'acid'],
+    'ground': ['dust', 'sand', 'clay', 'stone'],
+    'flying': ['wing', 'plume', 'gale', 'glide'],
+    'psychic': ['mind', 'dream', 'aura', 'trance'],
+    'bug': ['wing', 'shell', 'larva', 'antenna'],
+    'rock': ['stone', 'boulder', 'flint', 'shard'],
+    'ghost': ['shade', 'spectre', 'wisp', 'ether'],
+    'dragon': ['fang', 'scale', 'wyrm', 'maw'],
+    'dark': ['shade', 'night', 'gloom', 'murk'],
+    'steel': ['iron', 'steel', 'plate', 'alloy'],
+    'normal': ['roamer', 'wild', 'rover', 'free'],
   };
 
-  /// [species] è la specie rilevata (es. "gatto"); se null o vuota
-  /// si usa "creatura" come base neutra. [types] sono i tipi già
-  /// assegnati alla creatura (basta il primo, quello posseduto alla
-  /// cattura).
+  /// [species] is the detected species (e.g. "cat"); if null or
+  /// empty, "wildkin" is used as a neutral base. [types] are the
+  /// types already assigned (only the first, the one owned at
+  /// capture, is used).
   String generate(String? species, List<String> types) {
     final base = (species == null || species.trim().isEmpty)
-        ? 'creatura'
+        ? 'wildkin'
         : species.trim().toLowerCase();
     final stem = _stemOf(base);
 
-    final primaryType = types.isNotEmpty ? types.first.toLowerCase() : 'normale';
-    final prefixes = _prefixes[primaryType] ?? _prefixes['normale']!;
-    final suffixes = _suffixes[primaryType] ?? _suffixes['normale']!;
+    final primaryType = types.isNotEmpty ? types.first.toLowerCase() : 'normal';
+    final prefixes = _prefixes[primaryType] ?? _prefixes['normal']!;
+    final suffixes = _suffixes[primaryType] ?? _suffixes['normal']!;
 
-    // 50/50 tra "SpecieSuffisso" (es. Gattardente) e
-    // "PrefissoSpecie" (es. Idrogatto), per un po' di varietà.
+    // 50/50 between "SpeciesSuffix" (e.g. Catblaze) and
+    // "PrefixSpecies" (e.g. Hydrocat), for some variety.
     if (_random.nextBool()) {
       final suffix = suffixes[_random.nextInt(suffixes.length)];
       return _capitalize(stem) + suffix;
@@ -78,14 +80,12 @@ class NameGenerator {
     }
   }
 
-  /// Toglie la vocale finale (o/a/e) dalla specie per rendere la
-  /// fusione più naturale: "gatto" -> "gatt", "farfalla" -> "farfall".
+  /// Trims a common trailing letter that would make the blend look
+  /// awkward when a suffix is appended (e.g. a repeated vowel).
+  /// Otherwise returns the species word as-is: English words don't
+  /// need the vowel-stripping trick some other languages do.
   String _stemOf(String species) {
     if (species.length <= 3) return species;
-    final lastChar = species[species.length - 1];
-    if (lastChar == 'o' || lastChar == 'a' || lastChar == 'e') {
-      return species.substring(0, species.length - 1);
-    }
     return species;
   }
 

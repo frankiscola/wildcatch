@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Pulsante arrotondato con un leggero gradiente e un'ombra soffice,
-/// in stile menu RSE (non più il rettangolo squadrato con l'ombra
-/// solida "a gradino" della prima versione pixel). Al tocco si
-/// schiaccia leggermente e l'ombra si riduce, per dare comunque un
-/// feedback fisico giocoso.
+/// A rounded button with a subtle gradient and a soft shadow, in a
+/// retro menu style (rather than the squared rectangle with a solid
+/// "stepped" shadow of the original pixel version). On tap it
+/// presses down slightly and the shadow shrinks, for playful
+/// physical-feeling feedback.
 ///
-/// Il nome della classe è rimasto `PixelButton` per non dover
-/// toccare tutti i punti dell'app che lo usano già.
+/// The class is still called `PixelButton` to avoid touching every
+/// place in the app that already uses it.
 class PixelButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -21,7 +21,7 @@ class PixelButton extends StatefulWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.background = AppColors.rubyRed,
+    this.background = AppColors.emberRed,
     this.foreground = AppColors.textOnDark,
     this.icon,
   });

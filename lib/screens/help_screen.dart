@@ -5,17 +5,17 @@ import '../theme/app_theme.dart';
 import '../theme/type_badge_assets.dart';
 import '../widgets/route_background.dart';
 
-/// Menu di aiuto/info: reference sempre disponibile su come funzionano
-/// le regole del gioco, per chi non vuole rivedersi tutto il tutorial
-/// a pagine solo per controllare un dettaglio (es. "quanto danno fa
-/// un attacco Acqua contro un Roccia?").
+/// Help/info menu: an always-available reference on how the game
+/// rules work, for anyone who doesn't want to go back through the
+/// whole multi-page tutorial just to check one detail (e.g. "how
+/// much damage does a Water attack do against a Rock type?").
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AIUTO')),
+      appBar: AppBar(title: const Text('HELP')),
       body: RouteBackground(
         child: SafeArea(
           child: ListView(
@@ -23,56 +23,57 @@ class HelpScreen extends StatelessWidget {
             children: const [
               _Section(
                 icon: Icons.public,
-                title: 'Come si sceglie il tipo',
-                body: 'Alla cattura la creatura riceve un solo tipo (raramente '
-                    'due, ~35% delle volte), scelto in base a diversi fattori '
-                    'del momento e del luogo:',
+                title: 'How the type is chosen',
+                body: 'At capture the Wildkin gets a single type (rarely '
+                    'two, ~35% of the time), chosen based on several '
+                    'factors of the moment and the place:',
                 bullets: [
-                  'Temperatura: molto caldo favorisce Fuoco/Terra, molto '
-                      'freddo favorisce Ghiaccio.',
-                  'Meteo: pioggia → Acqua, temporale → Elettro, neve → '
-                      'Ghiaccio, nebbia → Psico/Veleno.',
-                  'Bioma: mare → Acqua, montagna → Roccia/Terra, foresta → '
-                      'Erba, città → Elettro/Roccia, deserto → '
-                      'Terra/Fuoco, pianura → Erba/Terra.',
-                  'Ora del giorno: notte favorisce Buio/Psico, giorno favorisce '
-                      'Volante.',
-                  'Stagione: estate → Fuoco/Terra, inverno → Ghiaccio, '
-                      'primavera → Erba, autunno → Terra/Buio.',
+                  'Temperature: very hot favors Fire/Ground, very '
+                      'cold favors Ice.',
+                  'Weather: rain → Water, thunderstorm → Electric, snow → '
+                      'Ice, fog → Psychic/Poison.',
+                  'Biome: sea → Water, mountain → Rock/Ground, forest → '
+                      'Grass, city → Electric/Rock, desert → '
+                      'Ground/Fire, plain → Grass/Ground.',
+                  'Time of day: night favors Dark/Psychic, day favors '
+                      'Flying.',
+                  'Season: summer → Fire/Ground, winter → Ice, '
+                      'spring → Grass, fall → Ground/Dark.',
                 ],
               ),
               SizedBox(height: 20),
               _Section(
                 icon: Icons.upgrade,
-                title: 'Evoluzione',
-                body: 'Ogni creatura catturata è sempre allo stadio base, al '
-                    'livello 5. Nello stesso istante viene deciso (in segreto) '
-                    'quante evoluzioni avrà:',
+                title: 'Evolution',
+                body: 'Every captured Wildkin always starts at the base '
+                    'stage, at level 5. At that same moment it\'s decided '
+                    '(secretly) how many evolutions it will have:',
                 bullets: [
-                  '~50% delle volte: UNA sola evoluzione, tra livello 40 e 50.',
-                  '~50% delle volte: DUE evoluzioni, la prima tra livello 15 e '
-                      '30, la seconda tra livello 55 e 75.',
-                  'Il livello esatto non si scopre mai in anticipo: la '
-                      'scheda della creatura mostra solo un indizio '
-                      'approssimativo (es. "evolve presto" o "evolve tardi").',
-                  'A ogni evoluzione la creatura guadagna un secondo tipo, '
-                      'influenzato sia dal momento della cattura sia da meteo, '
-                      'luogo e ora dell\'evoluzione stessa.',
+                  '~50% of the time: ONE single evolution, between level '
+                      '40 and 50.',
+                  '~50% of the time: TWO evolutions, the first between level '
+                      '15 and 30, the second between level 55 and 75.',
+                  'The exact level is never revealed in advance: the '
+                      'Wildkin\'s card only shows a rough hint (e.g. '
+                      '"evolves soon" or "evolves late").',
+                  'At each evolution the Wildkin gains a second type, '
+                      'influenced both by the moment of capture and by the '
+                      'weather, place, and time of the evolution itself.',
                 ],
               ),
               SizedBox(height: 20),
               _Section(
                 icon: Icons.bolt,
-                title: 'Livelli e mosse',
-                body: 'Si sale di livello vincendo battaglie contro altri '
-                    'animali fotografati, fino a un massimo di livello 100.',
+                title: 'Levels and moves',
+                body: 'You level up by winning battles against other '
+                    'photographed animals, up to a maximum of level 100.',
                 bullets: [
-                  'Si parte con 4 mosse iniziali, tutte coerenti col tipo '
-                      'della creatura.',
-                  'Salendo di livello si sbloccano mosse più forti, da '
-                      'scegliere se imparare al posto di una già conosciuta.',
-                  'In battaglia, più indebolisci un animale selvatico (HP '
-                      'bassi), più alta è la probabilità di catturarlo.',
+                  'You start with 4 initial moves, all matching the '
+                      'Wildkin\'s type.',
+                  'As you level up, stronger moves unlock, which you can '
+                      'choose to learn in place of one you already know.',
+                  'In battle, the more you weaken a wild animal (low HP), '
+                      'the higher the odds of catching it.',
                 ],
               ),
               SizedBox(height: 20),
@@ -116,7 +117,7 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.rubyRed, size: 22),
+              Icon(icon, color: AppColors.emberRed, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(title, style: AppFonts.pixelTitle(fontSize: 16, color: AppColors.panelBrown)),
@@ -144,10 +145,11 @@ class _Section extends StatelessWidget {
   }
 }
 
-/// Tabella di efficacia dei 12 tipi, generata da TypeChart.all: una
-/// card per tipo con le sue debolezze/resistenze/immunità colorate,
-/// così se cambia la tabella in type_chart.dart questa schermata si
-/// aggiorna da sola, senza bisogno di tenerle sincronizzate a mano.
+/// Effectiveness table for the 11 types, generated from
+/// TypeChart.all: one card per type with its weaknesses/resistances/
+/// immunities colored, so if the table in type_chart.dart changes
+/// this screen updates itself, with no need to keep them in sync by
+/// hand.
 class _TypeChartSection extends StatelessWidget {
   const _TypeChartSection();
 
@@ -168,11 +170,11 @@ class _TypeChartSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.shield, color: AppColors.sapphireBlue, size: 22),
+              const Icon(Icons.shield, color: AppColors.tidalBlue, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Tabella dei tipi',
+                  'Type chart',
                   style: AppFonts.pixelTitle(fontSize: 16, color: AppColors.panelBrown),
                 ),
               ),
@@ -180,9 +182,9 @@ class _TypeChartSection extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Per ogni tipo: contro cosa è debole (subisce 2x), cosa resiste '
-            '(0.5x) e a cosa è immune (0x). Con due tipi, gli effetti si '
-            'moltiplicano tra loro.',
+            'For each type: what it\'s weak against (takes 2x), what it '
+            'resists (0.5x), and what it\'s immune to (0x). With two '
+            'types, the effects multiply together.',
             style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
           ),
           const SizedBox(height: 14),
@@ -213,8 +215,8 @@ class _TypeMatchupCard extends StatelessWidget {
         children: [
           _TypeBadge(type: info.type),
           const SizedBox(height: 8),
-          _MatchupRow(label: 'Debole (2x)', types: info.weakTo, emptyDash: true),
-          _MatchupRow(label: 'Resiste (0.5x)', types: info.resists, emptyDash: true),
+          _MatchupRow(label: 'Weak (2x)', types: info.weakTo, emptyDash: true),
+          _MatchupRow(label: 'Resists (0.5x)', types: info.resists, emptyDash: true),
           if (info.immuneTo.isNotEmpty) _MatchupRow(label: 'Immune', types: info.immuneTo),
         ],
       ),

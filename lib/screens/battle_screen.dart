@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../models/move.dart';
 import '../models/wild_encounter.dart';
 import '../services/battle_engine.dart';
@@ -10,18 +10,17 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
 
-/// Schermata di battaglia: il proprio Pokemon (già catturato) affronta
-/// una creatura selvatica appena fotografata. Il giocatore può
-/// attaccare per indebolirla (aumentando le chance di cattura) oppure
-/// tentare la cattura in qualunque momento — esattamente come nel
-/// ciclo classico "indebolisci poi lancia la pokeball".
+/// Battle screen: the player's own Wildkin (already captured) faces
+/// a wild Wildkin that was just photographed. The player can attack
+/// to weaken it (raising the capture odds) or attempt a capture at
+/// any time — the classic "weaken it, then try to catch it" loop.
 class BattleScreen extends StatefulWidget {
-  final Creature ownCreature;
+  final Wildkin ownWildkin;
   final WildEncounter initialWild;
 
   const BattleScreen({
     super.key,
-    required this.ownCreature,
+    required this.ownWildkin,
     required this.initialWild,
   });
 
@@ -33,7 +32,7 @@ class _BattleScreenState extends State<BattleScreen> {
   final _engine = BattleEngine();
   late WildEncounter _wild;
   late int _ownHp;
-  String _log = 'Una creatura selvatica appare!';
+  String _log = 'A wild Wildkin appears!';
   bool _busy = false;
   bool _battleOver = false;
 
@@ -41,7 +40,7 @@ class _BattleScreenState extends State<BattleScreen> {
   void initState() {
     super.initState();
     _wild = widget.initialWild;
-    _ownHp = widget.ownCreature.computeStats().maxHp;
+    _ownHp = widget.ownWildkin.computeStats().maxHp;
   }
 
   Future<void> _useMove(Move move) async {
@@ -49,33 +48,36 @@ class _BattleScreenState extends State<BattleScreen> {
     setState(() => _busy = true);
 
     final result = _engine.attackWild(
-      attacker: widget.ownCreature,
+      attacker: widget.ownWildkin,
       target: _wild,
       move: move,
     );
 
     setState(() {
       if (!result.hit) {
-        _log = '${widget.ownCreature.nickname} usa ${move.name}... ma fallisce!';
+        _log = '${widget.ownWildkin.nickname} uses ${move.name}... but it misses!';
       } else {
         _wild = _wild.copyWith(
           currentHp: (_wild.currentHp - result.damage).clamp(0, _wild.maxHp),
         );
-        _log = '${widget.ownCreature.nickname} usa ${move.name}! '
-            '${result.damage} danni.';
+        _log = '${widget.ownWildkin.nickname} uses ${move.name}! '
+            '${result.damage} damage.';
+        if (result.effectivenessMessage != null) {
+          _log += '\n${result.effectivenessMessage}';
+        }
       }
     });
 
     if (_wild.currentHp <= 0) {
       setState(() {
-        _log = 'La creatura selvatica è esausta! Ora è più facile catturarla.';
+        _log = 'The wild Wildkin is worn out! It should be easier to catch now.';
         _battleOver = true;
         _busy = false;
       });
       return;
     }
 
-    // Contrattacco della creatura selvatica.
+    // The wild Wildkin counterattacks.
     await Future.delayed(const Duration(milliseconds: 500));
     if (_wild.moves.isEmpty) {
       setState(() => _busy = false);
@@ -84,20 +86,23 @@ class _BattleScreenState extends State<BattleScreen> {
     final wildMove = _wild.moves[(_wild.moves.length > 1) ? 1 : 0];
     final counter = _engine.attackOwn(
       attacker: _wild,
-      target: widget.ownCreature,
+      target: widget.ownWildkin,
       move: wildMove,
     );
 
     setState(() {
       if (counter.hit) {
-        _ownHp = (_ownHp - counter.damage).clamp(0, widget.ownCreature.computeStats().maxHp);
-        _log += '\nLa creatura selvatica risponde con ${wildMove.name}! '
-            '${counter.damage} danni a ${widget.ownCreature.nickname}.';
+        _ownHp = (_ownHp - counter.damage).clamp(0, widget.ownWildkin.computeStats().maxHp);
+        _log += '\nThe wild Wildkin strikes back with ${wildMove.name}! '
+            '${counter.damage} damage to ${widget.ownWildkin.nickname}.';
+        if (counter.effectivenessMessage != null) {
+          _log += '\n${counter.effectivenessMessage}';
+        }
       }
       _busy = false;
       if (_ownHp <= 0) {
         _battleOver = true;
-        _log += '\n${widget.ownCreature.nickname} non può più combattere!';
+        _log += '\n${widget.ownWildkin.nickname} can no longer battle!';
       }
     });
   }
@@ -110,19 +115,19 @@ class _BattleScreenState extends State<BattleScreen> {
     setState(() {
       _battleOver = true;
       _log = success
-          ? 'Cattura riuscita! (probabilità era ${(probability * 100).round()}%)'
-          : 'La creatura è scappata! (probabilità era ${(probability * 100).round()}%)';
+          ? 'Capture successful! (odds were ${(probability * 100).round()}%)'
+          : 'The Wildkin got away! (odds were ${(probability * 100).round()}%)';
     });
 
-    // TODO: se success, qui va invocata la logica che trasforma la
-    // WildEncounter in una vera Creature (nuovo EvolutionPlan,
-    // moveset iniziale) e la salva su Supabase.
+    // TODO: on success, this is where the logic that turns the
+    // WildEncounter into a real Wildkin (new EvolutionPlan, starter
+    // moveset) and saves it to Supabase should be invoked.
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('BATTAGLIA')),
+      appBar: AppBar(title: const Text('BATTLE')),
       body: RouteBackground(
         child: SafeArea(
           child: Padding(
@@ -132,7 +137,7 @@ class _BattleScreenState extends State<BattleScreen> {
                 _WildHpBar(wild: _wild),
                 const SizedBox(height: 10),
                 _OwnHpBar(
-                  creature: widget.ownCreature,
+                  wildkin: widget.ownWildkin,
                   currentHp: _ownHp,
                 ),
                 const SizedBox(height: 16),
@@ -144,24 +149,24 @@ class _BattleScreenState extends State<BattleScreen> {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: widget.ownCreature.moves
+                    children: widget.ownWildkin.moves
                         .map((m) => PixelButton(
                               label: m.move.name.toUpperCase(),
-                              background: AppColors.sapphireBlue,
+                              background: AppColors.tidalBlue,
                               onPressed: _busy ? null : () => _useMove(m.move),
                             ))
                         .toList(),
                   ),
                   const SizedBox(height: 12),
                   PixelButton(
-                    label: 'TENTA CATTURA',
+                    label: 'ATTEMPT CAPTURE',
                     background: AppColors.grassGreen,
-                    icon: Icons.catching_pokemon,
+                    icon: Icons.center_focus_strong,
                     onPressed: _busy ? null : _attemptCatch,
                   ),
                 ] else
                   PixelButton(
-                    label: 'CHIUDI',
+                    label: 'CLOSE',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
               ],
@@ -180,7 +185,7 @@ class _WildHpBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _HpRow(
-      title: 'Selvatico · Lv.${wild.level}',
+      title: 'Wild · Lv.${wild.level}',
       types: wild.types,
       current: wild.currentHp,
       max: wild.maxHp,
@@ -189,17 +194,17 @@ class _WildHpBar extends StatelessWidget {
 }
 
 class _OwnHpBar extends StatelessWidget {
-  final Creature creature;
+  final Wildkin wildkin;
   final int currentHp;
-  const _OwnHpBar({required this.creature, required this.currentHp});
+  const _OwnHpBar({required this.wildkin, required this.currentHp});
 
   @override
   Widget build(BuildContext context) {
     return _HpRow(
-      title: '${creature.nickname} · Lv.${creature.level}',
-      types: creature.types,
+      title: '${wildkin.nickname} · Lv.${wildkin.level}',
+      types: wildkin.types,
       current: currentHp,
-      max: creature.computeStats().maxHp,
+      max: wildkin.computeStats().maxHp,
     );
   }
 }
@@ -222,7 +227,7 @@ class _HpRow extends StatelessWidget {
     final fraction = max == 0 ? 0.0 : (current / max).clamp(0.0, 1.0);
     final barColor = fraction > 0.5
         ? AppColors.grassGreen
-        : (fraction > 0.2 ? const Color(0xFFE0A62B) : AppColors.rubyRed);
+        : (fraction > 0.2 ? const Color(0xFFE0A62B) : AppColors.emberRed);
 
     return Container(
       decoration: BoxDecoration(
@@ -257,7 +262,7 @@ class _HpRow extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text('$current / $max PS', style: AppFonts.body(fontSize: 13)),
+          Text('$current / $max HP', style: AppFonts.body(fontSize: 13)),
         ],
       ),
     );

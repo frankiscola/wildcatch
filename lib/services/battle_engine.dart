@@ -1,15 +1,15 @@
 import 'dart:math';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../models/move.dart';
 import '../models/type_chart.dart';
 import '../models/wild_encounter.dart';
 
-/// Esito di un singolo attacco.
+/// Outcome of a single attack.
 class AttackResult {
   final bool hit;
   final int damage;
-  final bool fainted; // true se il bersaglio è stato messo KO
-  final double effectiveness; // 0, 0.25, 0.5, 1, 2 o 4 (due tipi deboli)
+  final bool fainted; // true if the target was knocked out
+  final double effectiveness; // 0, 0.25, 0.5, 1, 2, or 4 (two weak types)
 
   const AttackResult({
     required this.hit,
@@ -18,29 +18,28 @@ class AttackResult {
     this.effectiveness = 1.0,
   });
 
-  /// Messaggio in stile Pokédex da mostrare dopo l'attacco, o null se
-  /// non c'è nulla di notevole da segnalare (效果 normale).
+  /// A Field-Journal-style message to show after the attack, or null
+  /// if there's nothing notable to report (normal effectiveness).
   String? get effectivenessMessage {
-    if (effectiveness <= 0) return 'Non ha alcun effetto...';
-    if (effectiveness >= 4) return 'È DEVASTANTE!';
-    if (effectiveness >= 2) return 'È superefficace!';
-    if (effectiveness < 1) return 'Non è molto efficace...';
-    return null; // effetto normale, nessun messaggio speciale
+    if (effectiveness <= 0) return 'It has no effect...';
+    if (effectiveness >= 4) return 'It\'s DEVASTATING!';
+    if (effectiveness >= 2) return 'It\'s super effective!';
+    if (effectiveness < 1) return 'It\'s not very effective...';
+    return null; // normal effect, no special message
   }
 }
 
-/// Gestisce la risoluzione dei turni di battaglia e il tentativo
-/// di cattura. Il danno usa una versione semplificata della formula
-/// ufficiale (niente STAB per l'MVP, ma con efficacia di tipo, vedi
-/// TypeChart).
+/// Handles resolving battle turns and capture attempts. Damage uses
+/// a simplified version of the official formula (no STAB for the
+/// MVP, but with type effectiveness, see TypeChart).
 class BattleEngine {
   final Random _random;
 
   BattleEngine({Random? random}) : _random = random ?? Random();
 
-  /// Il proprio Pokemon attacca la creatura selvatica.
+  /// The player's own Wildkin attacks the wild one.
   AttackResult attackWild({
-    required Creature attacker,
+    required Wildkin attacker,
     required WildEncounter target,
     required Move move,
   }) {
@@ -48,29 +47,29 @@ class BattleEngine {
     return _resolveAttack(
       move: move,
       attackerLevel: attacker.level,
-      attackStat: move.category == MoveCategory.fisica ? stats.attack : stats.spAttack,
-      defenseStat: move.category == MoveCategory.fisica
+      attackStat: move.category == MoveCategory.physical ? stats.attack : stats.insight,
+      defenseStat: move.category == MoveCategory.physical
           ? _wildDefense(target)
-          : _wildSpDefense(target),
+          : _wildWard(target),
       targetCurrentHp: target.currentHp,
       defenderTypes: target.types,
     );
   }
 
-  /// La creatura selvatica contrattacca.
+  /// The wild Wildkin counterattacks.
   AttackResult attackOwn({
     required WildEncounter attacker,
-    required Creature target,
+    required Wildkin target,
     required Move move,
   }) {
     final stats = target.computeStats();
     return _resolveAttack(
       move: move,
       attackerLevel: attacker.level,
-      attackStat: move.category == MoveCategory.fisica
+      attackStat: move.category == MoveCategory.physical
           ? _wildAttack(attacker)
-          : _wildSpAttack(attacker),
-      defenseStat: move.category == MoveCategory.fisica ? stats.defense : stats.spDefense,
+          : _wildInsight(attacker),
+      defenseStat: move.category == MoveCategory.physical ? stats.defense : stats.ward,
       targetCurrentHp: target.currentHp,
       defenderTypes: target.types,
     );
@@ -84,7 +83,7 @@ class BattleEngine {
     required int targetCurrentHp,
     required List<String> defenderTypes,
   }) {
-    if (move.category == MoveCategory.stato) {
+    if (move.category == MoveCategory.status) {
       return const AttackResult(hit: true, damage: 0, fainted: false);
     }
 
@@ -96,8 +95,8 @@ class BattleEngine {
       return AttackResult(hit: true, damage: 0, fainted: false, effectiveness: 0);
     }
 
-    // Formula di danno semplificata (schema classico), con
-    // l'efficacia di tipo applicata come moltiplicatore finale.
+    // Simplified damage formula (classic scheme), with type
+    // effectiveness applied as a final multiplier.
     final base = (((2 * attackerLevel / 5 + 2) * move.power * attackStat / defenseStat) / 50) + 2;
     final randomFactor = 0.85 + _random.nextDouble() * 0.15;
     final damage = max(1, (base * randomFactor * effectiveness).floor());
@@ -111,17 +110,17 @@ class BattleEngine {
     );
   }
 
-  /// Tentativo di cattura: più la creatura selvatica è indebolita,
-  /// più la probabilità sale. Ispirata alla formula classica
-  /// (catchRate legato a HP correnti/massimi), semplificata con un
-  /// unico "tasso di cattura base" per tutte le creature (0-255 come
-  /// nei giochi originali; 190 è un valore medio-facile).
+  /// Capture attempt: the weaker the wild Wildkin is, the higher the
+  /// probability. Inspired by the classic formula (catch rate tied
+  /// to current/max HP), simplified with a single "base catch rate"
+  /// for every Wildkin (0-255 as in the original games; 190 is an
+  /// average-easy value).
   ///
-  /// Ritorna un valore 0.0-1.0 = probabilità di successo.
+  /// Returns a 0.0-1.0 value = probability of success.
   double catchProbability(WildEncounter target, {int baseCatchRate = 190}) {
     final hpFactor = (3 * target.maxHp - 2 * target.currentHp) / (3 * target.maxHp);
     final raw = hpFactor * (baseCatchRate / 255);
-    return raw.clamp(0.03, 0.98); // mai 0% né 100% garantito, per tensione
+    return raw.clamp(0.03, 0.98); // never a guaranteed 0% or 100%, for tension
   }
 
   bool attemptCatch(WildEncounter target, {int baseCatchRate = 190}) {
@@ -129,12 +128,12 @@ class BattleEngine {
     return _random.nextDouble() < probability;
   }
 
-  // Stat "virtuali" per una creatura selvatica: stessa formula di
-  // Creature.computeStats() ma applicata ai suoi baseStats.
+  // "Virtual" stats for a wild Wildkin: same formula as
+  // Wildkin.computeStats() but applied to its baseStats.
   int _wildAttack(WildEncounter w) => _statAt(w.baseStats.attack, w.level);
   int _wildDefense(WildEncounter w) => _statAt(w.baseStats.defense, w.level);
-  int _wildSpAttack(WildEncounter w) => _statAt(w.baseStats.spAttack, w.level);
-  int _wildSpDefense(WildEncounter w) => _statAt(w.baseStats.spDefense, w.level);
+  int _wildInsight(WildEncounter w) => _statAt(w.baseStats.insight, w.level);
+  int _wildWard(WildEncounter w) => _statAt(w.baseStats.ward, w.level);
 
   int _statAt(int base, int level) => (((2 * base) * level) / 100).floor() + 5;
 }

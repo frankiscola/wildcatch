@@ -1,75 +1,78 @@
 import 'package:flutter/material.dart';
 
-/// Palette WildKin: uno split freddo/caldo (blu foresta/fiume da un
-/// lato, arancio brace dall'altro) ispirato al logo dell'app, con lo
-/// stile "dialog box" da RPG a schermo basso mantenuto per i testi.
+/// Wildkin palette: a cool/warm split (forest/river blue on one
+/// side, ember orange on the other) inspired by the app's logo, with
+/// the low-res RPG "dialog box" look kept for text.
 class AppColors {
   AppColors._();
 
-  // Sfondo "cielo da percorso" usato nelle schermate principali
+  // "Route sky" background used in the main screens
   static const routeSkyTop = Color(0xFF4FB3E8);
   static const routeSkyBottom = Color(0xFFBFE6C8);
 
-  // Dialog box (il classico riquadro di testo chiaro con bordo scuro)
+  // Dialog box (the classic light text box with a dark border)
   static const dialogBackground = Color(0xFFF8F4E3);
   static const dialogBorderOuter = Color(0xFF2B2320);
   static const dialogBorderInner = Color(0xFF8B5A2B);
   static const dialogText = Color(0xFF2B2320);
 
-  // Accento "brace" (lato caldo/arancio del logo): stati urgenti,
-  // errori, rifiuti — tenuto sul nome storico rubyRed per non dover
-  // toccare ogni punto della UI che già lo referenzia.
-  static const rubyRed = Color(0xFFE8590C);
-  static const rubyRedDark = Color(0xFFB8420A);
+  // "Ember" accent (warm/orange side of the logo): urgent states,
+  // errors, rejections.
+  static const emberRed = Color(0xFFE8590C);
+  static const emberRedDark = Color(0xFFB8420A);
 
-  // Accento "fiume" (lato freddo/blu del logo): stati neutri/di
-  // attesa. Stesso discorso sul nome storico sapphireBlue.
-  static const sapphireBlue = Color(0xFF1C7ED6);
-  static const sapphireBlueDark = Color(0xFF14568F);
+  // "River" accent (cool/blue side of the logo): neutral/waiting
+  // states.
+  static const tidalBlue = Color(0xFF1C7ED6);
+  static const tidalBlueDark = Color(0xFF14568F);
 
-  // Pokeball (icona generica "sfera di cattura", nessun riferimento a
-  // design esistenti: solo tre colori base rosso/bianco/nero)
-  static const pokeballRed = Color(0xFFE23E3E);
-  static const pokeballDark = Color(0xFF1F1F1F);
-  static const pokeballWhite = Color(0xFFF5F5F5);
+  // Capture scanner (a generic "capture orb" icon, an original
+  // design, not modeled on any existing game's item)
+  static const captureOrbRed = Color(0xFF2FA6A0);
+  static const captureOrbDark = Color(0xFF1F1F1F);
+  static const captureOrbWhite = Color(0xFFF5F5F5);
+  static const captureOrbGold = Color(0xFFE8B23D);
 
-  // UI generale
+  // General UI
   static const panelCream = Color(0xFFFFF7E6);
   static const panelBrown = Color(0xFF4A342A);
   static const grassGreen = Color(0xFF5CB338);
   static const shadowSoft = Color(0x33000000);
 
-  // Testo su sfondi scuri
+  // Text on dark backgrounds
   static const textOnDark = Color(0xFFF8F4E3);
   static const textMuted = Color(0xFF6B5B4B);
 
-  /// Il gradiente diagonale freddo→caldo del logo, per schermate
-  /// "di marca" (splash, onboarding, header dell'help) dove ha senso
-  /// richiamare l'icona dell'app invece dei toni neutri da dialog box.
+  /// The logo's diagonal cool→warm gradient, for "brand" screens
+  /// (splash, onboarding, help header) where it makes sense to echo
+  /// the app icon instead of the neutral dialog-box tones.
   static const brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [sapphireBlue, rubyRed],
+    colors: [tidalBlue, emberRed],
   );
 }
 
-/// Colori ufficiali (approssimati) associati a ciascun tipo,
-/// usati per i badge e i bordi delle card.
+/// Original colors associated with each of the 11 types in the game,
+/// used for badges and card borders. Deliberately NOT the same hex
+/// values used by any existing game's type colors — this is our own
+/// palette, chosen only to feel thematically fitting (fire = warm
+/// orange, water = blue, etc.).
 class TypeColors {
   TypeColors._();
 
   static const Map<String, Color> byName = {
-    'fuoco': Color(0xFFF08030),
-    'acqua': Color(0xFF6890F0),
-    'elettro': Color(0xFFF8D030),
-    'erba': Color(0xFF78C850),
-    'ghiaccio': Color(0xFF98D8D8),
-    'veleno': Color(0xFFA040A0),
-    'terra': Color(0xFFE0C068),
-    'volante': Color(0xFFA890F0),
-    'psico': Color(0xFFF85888),
-    'roccia': Color(0xFFB8A038),
-    'buio': Color(0xFF705848),
+    'fire': Color(0xFFE0632C),
+    'water': Color(0xFF3E7FD1),
+    'electric': Color(0xFFF2C230),
+    'grass': Color(0xFF5FAE4A),
+    'ice': Color(0xFF7ED4D6),
+    'poison': Color(0xFF8E4A9E),
+    'ground': Color(0xFFC9A24E),
+    'flying': Color(0xFF8E9EE8),
+    'psychic': Color(0xFFE0568F),
+    'rock': Color(0xFF9E8C4A),
+    'dark': Color(0xFF5A4C3E),
   };
 
   static Color of(String type) =>

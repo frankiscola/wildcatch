@@ -3,21 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
-import '../widgets/pokeball_spinner.dart';
+import '../widgets/capture_spinner.dart';
 import '../widgets/pixel_button.dart';
 import '../providers/capture_flow_provider.dart';
 import 'capture_screen.dart';
 import 'result_screen.dart';
 
-/// Schermata mostrata durante ogni singolo scatto (sia il primo
-/// avvistamento sia la conferma): raccolta contesto, analisi di
-/// liveness, upload, chiamata server. Il testo del dialog box cambia
-/// in base allo step corrente, imitando la sequenza di cattura dei
-/// giochi originali.
+/// Screen shown during each individual shot (both the first sighting
+/// and the confirmation): gathering context, liveness analysis,
+/// upload, server call. The dialog box text changes based on the
+/// current step, mirroring the capture sequence of classic games.
 ///
-/// [isConfirmation] indica se questo scatto è il primo avvistamento
-/// o la conferma, solo per scegliere i messaggi e la navigazione
-/// giusta al termine.
+/// [isConfirmation] indicates whether this shot is the first
+/// sighting or the confirmation, only used to pick the right
+/// messages and navigation at the end.
 class GeneratingScreen extends ConsumerWidget {
   final bool isConfirmation;
 
@@ -26,29 +25,29 @@ class GeneratingScreen extends ConsumerWidget {
   String _messageFor(CaptureStep step) {
     switch (step) {
       case CaptureStep.idle:
-        return 'Preparo la cattura...';
+        return 'Getting ready to capture...';
       case CaptureStep.requestingContext:
-        return 'Rilevo posizione, meteo e ora...';
+        return 'Reading location, weather, and time...';
       case CaptureStep.capturingBurst:
-        return 'Tieni fermo il telefono un istante...';
+        return 'Hold the phone steady for a moment...';
       case CaptureStep.uploadingPhoto:
-        return 'Invio la foto al Pokedex...';
+        return 'Sending the photo to the Field Journal...';
       case CaptureStep.recordingSighting:
-        return 'Registro l\'avvistamento...';
+        return 'Recording the sighting...';
       case CaptureStep.awaitingConfirmation:
-        return 'Avvistamento registrato! Ora conferma.';
+        return 'Sighting recorded! Now confirm it.';
       case CaptureStep.confirmingSighting:
-        return 'Verifico che sia lo stesso animale...';
+        return 'Checking it\'s the same animal...';
       case CaptureStep.naming:
-        return 'Le sto dando un nome...';
+        return 'Giving it a name...';
       case CaptureStep.done:
-        return 'Cattura riuscita!';
+        return 'Capture successful!';
       case CaptureStep.sightingExpired:
-        return 'Il tempo per confermare è scaduto.';
+        return 'The time to confirm has run out.';
       case CaptureStep.rejected:
-        return 'Non sono riuscito a confermare l\'avvistamento.';
+        return 'Couldn\'t confirm the sighting.';
       case CaptureStep.error:
-        return 'Qualcosa è andato storto durante la cattura.';
+        return 'Something went wrong during the capture.';
     }
   }
 
@@ -67,14 +66,14 @@ class GeneratingScreen extends ConsumerWidget {
     ref.listen<CaptureFlowState>(captureFlowProvider, (previous, next) {
       if (next.step == CaptureStep.done && next.result != null) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => ResultScreen(creature: next.result!)),
+          MaterialPageRoute(builder: (_) => ResultScreen(wildkin: next.result!)),
           (route) => route.isFirst,
         );
         return;
       }
 
-      // Primo scatto riuscito: si passa alla schermata di conferma,
-      // sostituendo questa (non si torna indietro a "Cattura").
+      // First shot successful: move on to the confirmation screen,
+      // replacing this one (no going back to "Capture").
       if (!isConfirmation && next.step == CaptureStep.awaitingConfirmation) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const CaptureScreen(isConfirmation: true)),
@@ -82,9 +81,9 @@ class GeneratingScreen extends ConsumerWidget {
         return;
       }
 
-      // Conferma rifiutata ma la finestra è ancora aperta: si torna
-      // alla schermata di conferma (che mostrerà il motivo del
-      // rifiuto e permetterà di riprovare subito un altro scatto).
+      // Confirmation rejected but the window is still open: go back
+      // to the confirmation screen (which will show the rejection
+      // reason and let the player immediately try another shot).
       if (isConfirmation && next.step == CaptureStep.rejected) {
         Navigator.of(context).pop();
         return;
@@ -100,17 +99,17 @@ class GeneratingScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (!_isTerminal(state.step)) ...[
-                  const PokeballSpinner(size: 96),
+                  const CaptureSpinner(size: 96),
                   const SizedBox(height: 32),
                 ] else ...[
-                  Icon(Icons.error_outline, size: 72, color: AppColors.rubyRed),
+                  Icon(Icons.error_outline, size: 72, color: AppColors.emberRed),
                   const SizedBox(height: 24),
                 ],
                 GbaDialogBox(text: _messageFor(state.step), fontSize: 18),
                 if (state.step == CaptureStep.sightingExpired) ...[
                   const SizedBox(height: 20),
                   PixelButton(
-                    label: 'RICOMINCIA',
+                    label: 'START OVER',
                     onPressed: () {
                       ref.read(captureFlowProvider.notifier).reset();
                       Navigator.of(context).pushAndRemoveUntil(
@@ -122,7 +121,7 @@ class GeneratingScreen extends ConsumerWidget {
                 ] else if (state.step == CaptureStep.error) ...[
                   const SizedBox(height: 20),
                   PixelButton(
-                    label: 'TORNA INDIETRO',
+                    label: 'GO BACK',
                     onPressed: () {
                       ref.read(captureFlowProvider.notifier).reset();
                       Navigator.of(context).pop();

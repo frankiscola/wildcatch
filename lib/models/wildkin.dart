@@ -3,36 +3,36 @@ import 'evolution_plan.dart';
 import 'move.dart';
 import 'stats.dart';
 
-/// Rappresenta una creatura catturata: le due sprite generate
-/// (fronte, mostrata nel "pokedex" e nel menu; retro, mostrata
-/// quando la creatura è in campo durante una battaglia), la sua
-/// progressione (livello, esperienza, statistiche), la sua catena
-/// evolutiva e il moveset, oltre ai metadati derivati dal contesto
-/// di cattura (e, se già evoluta, dal contesto di evoluzione).
-class Creature {
+/// Represents a captured Wildkin: its two generated sprites (front,
+/// shown in the Field Journal and menus; back, shown when the
+/// Wildkin is on the field during a battle), its progression
+/// (level, experience, stats), its evolution chain and moveset,
+/// plus the metadata derived from the capture context (and, once
+/// evolved, from the evolution context).
+class Wildkin {
   final String id;
   final String nickname;
   final String originalPhotoUrl;
   final String frontSpriteUrl;
   final String backSpriteUrl;
 
-  /// 1 tipo alla cattura, 2 a partire dalla prima evoluzione.
+  /// 1 type at capture, 2 starting from the first evolution.
   final List<String> types;
 
-  final int level; // 1-100, parte sempre da 5 alla cattura
+  final int level; // 1-100, always starts at 5 on capture
   final int currentExp;
-  final int currentHp; // può essere < maxHp se reduce da una battaglia
+  final int currentHp; // can be < maxHp if it took damage in a battle
 
   final BaseStats baseStats;
-  final List<LearnedMove> moves; // sempre al massimo 4
+  final List<LearnedMove> moves; // always 4 at most
   final EvolutionPlan evolutionPlan;
 
   final CaptureContext captureContext;
-  final CaptureContext? evolutionContext; // valorizzato solo dopo la 1a evoluzione
+  final CaptureContext? evolutionContext; // set only after the 1st evolution
 
-  final String? speciesHint; // es. "gatto", "cane", "gabbiano"
+  final String? speciesHint; // e.g. "cat", "dog", "seagull"
 
-  const Creature({
+  const Wildkin({
     required this.id,
     required this.nickname,
     required this.originalPhotoUrl,
@@ -51,8 +51,9 @@ class Creature {
   });
 
   ComputedStats computeStats() {
-    // Formule ispirate a quelle ufficiali (semplificate: niente EV,
-    // gli IV sono impliciti nei baseStats generati alla cattura).
+    // Formulas inspired by the classic ones (simplified: no EVs,
+    // the Potential Score is implicit in the baseStats generated at
+    // capture).
     int statAt(int base) => (((2 * base) * level) / 100).floor() + 5;
 
     final maxHp = (((2 * baseStats.hp) * level) / 100).floor() + level + 10;
@@ -61,13 +62,13 @@ class Creature {
       maxHp: maxHp,
       attack: statAt(baseStats.attack),
       defense: statAt(baseStats.defense),
-      spAttack: statAt(baseStats.spAttack),
-      spDefense: statAt(baseStats.spDefense),
+      insight: statAt(baseStats.insight),
+      ward: statAt(baseStats.ward),
       speed: statAt(baseStats.speed),
     );
   }
 
-  Creature copyWith({
+  Wildkin copyWith({
     String? nickname,
     List<String>? types,
     int? level,
@@ -79,7 +80,7 @@ class Creature {
     String? frontSpriteUrl,
     String? backSpriteUrl,
   }) {
-    return Creature(
+    return Wildkin(
       id: id,
       nickname: nickname ?? this.nickname,
       originalPhotoUrl: originalPhotoUrl,
@@ -98,8 +99,8 @@ class Creature {
     );
   }
 
-  factory Creature.fromJson(Map<String, dynamic> json) {
-    return Creature(
+  factory Wildkin.fromJson(Map<String, dynamic> json) {
+    return Wildkin(
       id: json['id'] as String,
       nickname: json['nickname'] as String? ?? '???',
       originalPhotoUrl: json['original_photo_url'] as String,

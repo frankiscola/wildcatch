@@ -3,27 +3,27 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/capture_context.dart';
 
-/// Incapsula tutta la logica di geolocalizzazione:
-/// permessi, posizione GPS, elevazione e stima del bioma.
+/// Wraps all geolocation logic: permissions, GPS position,
+/// elevation, and biome estimation.
 class LocationService {
-  /// Chiede i permessi e restituisce la posizione corrente.
-  /// Lancia un'eccezione se i permessi vengono negati.
+  /// Requests permissions and returns the current position.
+  /// Throws an exception if permissions are denied.
   Future<Position> getCurrentPosition() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw LocationServiceException('Il GPS è disattivato.');
+      throw LocationServiceException('GPS is turned off.');
     }
 
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw LocationServiceException('Permesso GPS negato.');
+        throw LocationServiceException('Location permission denied.');
       }
     }
     if (permission == LocationPermission.deniedForever) {
       throw LocationServiceException(
-        'Permesso GPS negato permanentemente. Abilitalo dalle impostazioni.',
+        'Location permission permanently denied. Enable it from settings.',
       );
     }
 
@@ -32,8 +32,8 @@ class LocationService {
     );
   }
 
-  /// Recupera l'elevazione in metri per una coppia lat/long
-  /// usando Open-Elevation (servizio gratuito, nessuna API key).
+  /// Fetches the elevation in meters for a lat/lon pair using
+  /// Open-Elevation (a free service, no API key needed).
   Future<double?> getElevation(double lat, double lon) async {
     final uri = Uri.parse(
       'https://api.open-elevation.com/api/v1/lookup?locations=$lat,$lon',
@@ -46,28 +46,27 @@ class LocationService {
       if (results.isEmpty) return null;
       return (results.first['elevation'] as num).toDouble();
     } catch (_) {
-      // TODO: aggiungere logging/telemetria degli errori di rete
+      // TODO: add logging/telemetry for network errors
       return null;
     }
   }
 
-  /// Stima il bioma combinando elevazione e reverse geocoding.
+  /// Estimates the biome by combining elevation and reverse geocoding.
   ///
-  /// Questa è un'euristica semplice pensata per l'MVP.
-  /// Per una stima più accurata si può interrogare la Overpass API
-  /// di OpenStreetMap cercando tag come natural=coastline,
-  /// natural=water, landuse=forest, landuse=residential nel raggio
-  /// di qualche km dal punto GPS.
+  /// This is a simple heuristic meant for the MVP. For a more
+  /// accurate estimate, query OpenStreetMap's Overpass API for tags
+  /// like natural=coastline, natural=water, landuse=forest,
+  /// landuse=residential within a few km of the GPS point.
   Biome estimateBiome({
     required double? elevationMeters,
     required double distanceFromCoastKm,
   }) {
-    if (distanceFromCoastKm < 2) return Biome.mare;
-    if (elevationMeters != null && elevationMeters > 1200) return Biome.montagna;
-    if (elevationMeters != null && elevationMeters > 600) return Biome.montagna;
-    return Biome.sconosciuto;
-    // TODO: integrare Overpass API per distinguere foresta,
-    // città e pianura in modo più affidabile.
+    if (distanceFromCoastKm < 2) return Biome.sea;
+    if (elevationMeters != null && elevationMeters > 1200) return Biome.mountain;
+    if (elevationMeters != null && elevationMeters > 600) return Biome.mountain;
+    return Biome.unknown;
+    // TODO: integrate the Overpass API to more reliably distinguish
+    // forest, city, and plain.
   }
 }
 

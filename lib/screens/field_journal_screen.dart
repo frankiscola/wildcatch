@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/creature.dart';
+import '../models/wildkin.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
@@ -9,26 +9,26 @@ import '../widgets/type_badge.dart';
 import '../providers/capture_flow_provider.dart';
 import 'result_screen.dart';
 
-class PokedexScreen extends ConsumerWidget {
-  const PokedexScreen({super.key});
+class FieldJournalScreen extends ConsumerWidget {
+  const FieldJournalScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final creaturesAsync = ref.watch(myCreaturesProvider);
+    final wildkinAsync = ref.watch(myWildkinProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('POKEDEX')),
+      appBar: AppBar(title: const Text('FIELD JOURNAL')),
       body: RouteBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: creaturesAsync.when(
-              data: (creatures) {
-                if (creatures.isEmpty) {
+            child: wildkinAsync.when(
+              data: (wildkinList) {
+                if (wildkinList.isEmpty) {
                   return const Center(
                     child: GbaDialogBox(
-                      text: 'Non hai ancora catturato nessuna creatura. '
-                          'Torna al menu e scatta la tua prima foto!',
+                      text: 'You haven\'t caught any Wildkin yet. '
+                          'Head back to the menu and take your first photo!',
                       fontSize: 16,
                     ),
                   );
@@ -40,15 +40,15 @@ class PokedexScreen extends ConsumerWidget {
                     crossAxisSpacing: 14,
                     childAspectRatio: 0.85,
                   ),
-                  itemCount: creatures.length,
+                  itemCount: wildkinList.length,
                   itemBuilder: (context, index) =>
-                      _CreatureCard(creature: creatures[index]),
+                      _WildkinCard(wildkin: wildkinList[index]),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(
                 child: GbaDialogBox(
-                  text: 'Impossibile caricare il Pokedex: $error',
+                  text: 'Could not load the Field Journal: $error',
                   fontSize: 15,
                 ),
               ),
@@ -60,16 +60,16 @@ class PokedexScreen extends ConsumerWidget {
   }
 }
 
-class _CreatureCard extends StatelessWidget {
-  final Creature creature;
+class _WildkinCard extends StatelessWidget {
+  final Wildkin wildkin;
 
-  const _CreatureCard({required this.creature});
+  const _WildkinCard({required this.wildkin});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ResultScreen(creature: creature)),
+        MaterialPageRoute(builder: (_) => ResultScreen(wildkin: wildkin)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -84,7 +84,7 @@ class _CreatureCard extends StatelessWidget {
           children: [
             Expanded(
               child: Image.network(
-                creature.frontSpriteUrl,
+                wildkin.frontSpriteUrl,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) =>
                     Icon(Icons.image_not_supported, color: AppColors.textMuted),
@@ -92,11 +92,11 @@ class _CreatureCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              creature.nickname,
+              wildkin.nickname,
               style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.panelBrown),
             ),
             const SizedBox(height: 4),
-            TypeBadgeRow(types: creature.types),
+            TypeBadgeRow(types: wildkin.types),
           ],
         ),
       ),

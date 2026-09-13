@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Pillola colorata e arrotondata con il nome del tipo, come quelle
-/// mostrate nella schermata riassuntiva del Pokemon nei giochi RSE
-/// (non più un badge squadrato con bordo pixel).
+/// A rounded, colored pill with the type's name — a soft badge
+/// style rather than a squared pixel-bordered one.
 class TypeBadge extends StatelessWidget {
   final String type;
 
@@ -34,7 +33,7 @@ class TypeBadge extends StatelessWidget {
   }
 }
 
-/// Riga di badge, usata per mostrare 1 o 2 tipi assieme.
+/// A row of badges, used to show 1 or 2 types together.
 class TypeBadgeRow extends StatelessWidget {
   final List<String> types;
 

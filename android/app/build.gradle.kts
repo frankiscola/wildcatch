@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.quince.wildcatch"
-    // Forzato a 36 invece di flutter.compileSdkVersion: la tua
-    // installazione Flutter riporta 33 di default, troppo vecchio
-    // per le dipendenze di geocoding_android (androidx.fragment,
-    // androidx.window, androidx.core, ecc. richiedono >= 34).
-    // Se in futuro aggiorni Flutter e questo torna a essere
-    // ridondante, puoi ripristinare flutter.compileSdkVersion.
+    namespace = "com.quince.wildkin"
+    // Forced to 36 instead of flutter.compileSdkVersion: your
+    // Flutter install reports 33 by default, too old for the
+    // geocoding_android dependencies (androidx.fragment,
+    // androidx.window, androidx.core, etc. require >= 34).
+    // If you update Flutter in the future and this becomes
+    // redundant, you can restore flutter.compileSdkVersion.
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -22,12 +22,12 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.quince.wildcatch"
+        applicationId = "com.quince.wildkin"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        // Stesso discorso di compileSdk: forzato a un valore >= 34
-        // per coerenza con le dipendenze installate.
+        // Same story as compileSdk: forced to a value >= 34 for
+        // consistency with the installed dependencies.
         targetSdk = 36
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)

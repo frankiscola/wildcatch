@@ -1,23 +1,24 @@
 import 'dart:math';
 import '../models/capture_context.dart';
 
-/// Motore di regole che assegna 1 o 2 tipi a una creatura in base
-/// al contesto di cattura (meteo, ora, stagione, bioma).
+/// Rule-based engine that assigns 1 or 2 types to a Wildkin based on
+/// the capture context (weather, time, season, biome). Restricted to
+/// the 11 types currently in the game (see TypeChart).
 ///
-/// NOTA: questa implementazione vive anche lato client solo per poter
-/// mostrare un'anteprima istantanea ("stai per incontrare un tipo
-/// [fuoco]...") mentre si aspetta la generazione vera e propria.
-/// La versione autorevole, che determina il tipo *definitivo* salvato
-/// nel database, DEVE vivere nella edge function Supabase, per poter
-/// essere aggiornata senza rilasciare una nuova build dell'app e per
-/// evitare che un client manomesso possa forzare un tipo.
+/// NOTE: this implementation also lives client-side purely to show an
+/// instant preview ("you're about to meet a [fire]-type...") while
+/// waiting for the real generation to finish. The authoritative
+/// version, which determines the *final* type saved to the database,
+/// MUST live in the Supabase edge function, so it can be updated
+/// without shipping a new app build and so a tampered client can't
+/// force a type.
 class TypingEngine {
   final Random _random;
 
   TypingEngine({Random? random}) : _random = random ?? Random();
 
-  /// Calcola i punteggi grezzi per ciascun tipo, poi ne estrae 1 o 2
-  /// tramite selezione pesata casuale (weighted random pick).
+  /// Computes raw scores for each type, then draws 1 or 2 of them via
+  /// weighted random selection.
   List<String> assignTypes(CaptureContext context) {
     final scores = _baseScores();
 
@@ -30,7 +31,7 @@ class TypingEngine {
     final primary = _weightedPick(scores);
     scores.remove(primary);
 
-    // ~35% di probabilità di avere un doppio tipo
+    // ~35% chance of getting a dual type
     final hasSecondType = _random.nextDouble() < 0.35;
     if (!hasSecondType || scores.isEmpty) return [primary];
 
@@ -39,109 +40,109 @@ class TypingEngine {
   }
 
   Map<String, double> _baseScores() => {
-        'fuoco': 3,
-        'acqua': 3,
-        'elettro': 3,
-        'erba': 3,
-        'ghiaccio': 2,
-        'veleno': 2,
-        'terra': 3,
-        'volante': 3,
-        'psico': 2,
-        'roccia': 3,
-        'buio': 2,
+        'fire': 3,
+        'water': 3,
+        'electric': 3,
+        'grass': 3,
+        'ice': 2,
+        'poison': 2,
+        'ground': 3,
+        'flying': 3,
+        'psychic': 2,
+        'rock': 3,
+        'dark': 2,
       };
 
   void _applyTemperature(Map<String, double> scores, double celsius) {
     if (celsius >= 30) {
-      scores['fuoco'] = (scores['fuoco'] ?? 0) + 6;
-      scores['terra'] = (scores['terra'] ?? 0) + 3;
+      scores['fire'] = (scores['fire'] ?? 0) + 6;
+      scores['ground'] = (scores['ground'] ?? 0) + 3;
     } else if (celsius >= 22) {
-      scores['erba'] = (scores['erba'] ?? 0) + 3;
+      scores['grass'] = (scores['grass'] ?? 0) + 3;
     } else if (celsius <= 5) {
-      scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 6;
+      scores['ice'] = (scores['ice'] ?? 0) + 6;
     } else if (celsius <= 12) {
-      scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 2;
+      scores['ice'] = (scores['ice'] ?? 0) + 2;
     }
   }
 
   void _applyWeather(Map<String, double> scores, String condition) {
     switch (condition) {
       case 'rain':
-        scores['acqua'] = (scores['acqua'] ?? 0) + 6;
+        scores['water'] = (scores['water'] ?? 0) + 6;
         break;
       case 'storm':
-        scores['elettro'] = (scores['elettro'] ?? 0) + 7;
-        scores['volante'] = (scores['volante'] ?? 0) + 2;
+        scores['electric'] = (scores['electric'] ?? 0) + 7;
+        scores['flying'] = (scores['flying'] ?? 0) + 2;
         break;
       case 'snow':
-        scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 7;
+        scores['ice'] = (scores['ice'] ?? 0) + 7;
         break;
       case 'fog':
-        scores['psico'] = (scores['psico'] ?? 0) + 4;
-        scores['veleno'] = (scores['veleno'] ?? 0) + 3;
+        scores['psychic'] = (scores['psychic'] ?? 0) + 4;
+        scores['poison'] = (scores['poison'] ?? 0) + 3;
         break;
       case 'clear':
-        scores['fuoco'] = (scores['fuoco'] ?? 0) + 1;
-        scores['volante'] = (scores['volante'] ?? 0) + 2;
+        scores['fire'] = (scores['fire'] ?? 0) + 1;
+        scores['flying'] = (scores['flying'] ?? 0) + 2;
         break;
     }
   }
 
   void _applySeason(Map<String, double> scores, String season) {
     switch (season) {
-      case 'estate':
-        scores['fuoco'] = (scores['fuoco'] ?? 0) + 2;
-        scores['terra'] = (scores['terra'] ?? 0) + 1;
+      case 'summer':
+        scores['fire'] = (scores['fire'] ?? 0) + 2;
+        scores['ground'] = (scores['ground'] ?? 0) + 1;
         break;
-      case 'inverno':
-        scores['ghiaccio'] = (scores['ghiaccio'] ?? 0) + 2;
+      case 'winter':
+        scores['ice'] = (scores['ice'] ?? 0) + 2;
         break;
-      case 'primavera':
-        scores['erba'] = (scores['erba'] ?? 0) + 3;
+      case 'spring':
+        scores['grass'] = (scores['grass'] ?? 0) + 3;
         break;
-      case 'autunno':
-        scores['terra'] = (scores['terra'] ?? 0) + 2;
-        scores['buio'] = (scores['buio'] ?? 0) + 1;
+      case 'fall':
+        scores['ground'] = (scores['ground'] ?? 0) + 2;
+        scores['dark'] = (scores['dark'] ?? 0) + 1;
         break;
     }
   }
 
   void _applyBiome(Map<String, double> scores, Biome biome) {
     switch (biome) {
-      case Biome.mare:
-        scores['acqua'] = (scores['acqua'] ?? 0) + 8;
+      case Biome.sea:
+        scores['water'] = (scores['water'] ?? 0) + 8;
         break;
-      case Biome.montagna:
-        scores['roccia'] = (scores['roccia'] ?? 0) + 8;
-        scores['terra'] = (scores['terra'] ?? 0) + 3;
+      case Biome.mountain:
+        scores['rock'] = (scores['rock'] ?? 0) + 8;
+        scores['ground'] = (scores['ground'] ?? 0) + 3;
         break;
-      case Biome.foresta:
-        scores['erba'] = (scores['erba'] ?? 0) + 6;
+      case Biome.forest:
+        scores['grass'] = (scores['grass'] ?? 0) + 6;
         break;
-      case Biome.cittaUrbana:
-        scores['elettro'] = (scores['elettro'] ?? 0) + 5;
-        scores['roccia'] = (scores['roccia'] ?? 0) + 3;
+      case Biome.urbanCity:
+        scores['electric'] = (scores['electric'] ?? 0) + 5;
+        scores['rock'] = (scores['rock'] ?? 0) + 3;
         break;
-      case Biome.pianura:
-        scores['erba'] = (scores['erba'] ?? 0) + 4;
-        scores['terra'] = (scores['terra'] ?? 0) + 2;
+      case Biome.plain:
+        scores['grass'] = (scores['grass'] ?? 0) + 4;
+        scores['ground'] = (scores['ground'] ?? 0) + 2;
         break;
-      case Biome.deserto:
-        scores['terra'] = (scores['terra'] ?? 0) + 7;
-        scores['fuoco'] = (scores['fuoco'] ?? 0) + 2;
+      case Biome.desert:
+        scores['ground'] = (scores['ground'] ?? 0) + 7;
+        scores['fire'] = (scores['fire'] ?? 0) + 2;
         break;
-      case Biome.sconosciuto:
+      case Biome.unknown:
         break;
     }
   }
 
   void _applyTimeOfDay(Map<String, double> scores, bool isNight) {
     if (isNight) {
-      scores['buio'] = (scores['buio'] ?? 0) + 6;
-      scores['psico'] = (scores['psico'] ?? 0) + 4;
+      scores['dark'] = (scores['dark'] ?? 0) + 6;
+      scores['psychic'] = (scores['psychic'] ?? 0) + 4;
     } else {
-      scores['volante'] = (scores['volante'] ?? 0) + 1;
+      scores['flying'] = (scores['flying'] ?? 0) + 1;
     }
   }
 

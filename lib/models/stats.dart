@@ -1,21 +1,21 @@
-/// Le sei statistiche di base, generate una volta alla cattura
-/// e poi scalate col livello (stesso schema concettuale dei
-/// giochi originali: gli "IV" restano fissi per la creatura,
-/// il valore effettivo cresce col livello).
+/// The six base stats, generated once at capture and then scaled
+/// with level (same conceptual scheme as classic monster-collecting
+/// RPGs: the "Potential Score" stays fixed for the Wildkin, the
+/// effective value grows with level).
 class BaseStats {
   final int hp;
   final int attack;
   final int defense;
-  final int spAttack;
-  final int spDefense;
+  final int insight; // special attack
+  final int ward; // special defense
   final int speed;
 
   const BaseStats({
     required this.hp,
     required this.attack,
     required this.defense,
-    required this.spAttack,
-    required this.spDefense,
+    required this.insight,
+    required this.ward,
     required this.speed,
   });
 
@@ -23,8 +23,8 @@ class BaseStats {
         'hp': hp,
         'attack': attack,
         'defense': defense,
-        'sp_attack': spAttack,
-        'sp_defense': spDefense,
+        'insight': insight,
+        'ward': ward,
         'speed': speed,
       };
 
@@ -32,27 +32,27 @@ class BaseStats {
         hp: json['hp'] as int,
         attack: json['attack'] as int,
         defense: json['defense'] as int,
-        spAttack: json['sp_attack'] as int,
-        spDefense: json['sp_defense'] as int,
+        insight: json['insight'] as int,
+        ward: json['ward'] as int,
         speed: json['speed'] as int,
       );
 }
 
-/// Statistiche effettive a un dato livello, calcolate da [BaseStats].
+/// Effective stats at a given level, calculated from [BaseStats].
 class ComputedStats {
   final int maxHp;
   final int attack;
   final int defense;
-  final int spAttack;
-  final int spDefense;
+  final int insight;
+  final int ward;
   final int speed;
 
   const ComputedStats({
     required this.maxHp,
     required this.attack,
     required this.defense,
-    required this.spAttack,
-    required this.spDefense,
+    required this.insight,
+    required this.ward,
     required this.speed,
   });
 }

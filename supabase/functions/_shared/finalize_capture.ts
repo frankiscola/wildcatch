@@ -1,15 +1,16 @@
-// Logica di finalizzazione di una cattura: determina tipo,
-// statistiche, mosse iniziali e piano evolutivo, poi salva la riga
-// in 'captures'. Estratta da generate-creature/index.ts perché ora
-// va richiamata da DUE punti:
-//  - generate-creature/index.ts stesso (percorso diretto, tenuto per
-//    test manuali da terminale, NON più usato dalla UI normale)
-//  - resolve-sighting/index.ts, che la chiama solo dopo aver
-//    verificato il doppio avvistamento (meccanismo 5)
+// Capture-finalization logic: determines type, stats, starting
+// moves, and evolution plan, then saves the row into 'captures'.
+// Extracted out of generate-wildkin/index.ts because it now needs to
+// be called from TWO places:
+//  - generate-wildkin/index.ts itself (the direct path, kept for
+//    manual testing from the terminal, NO LONGER used by the normal
+//    UI)
+//  - resolve-sighting/index.ts, which calls it only after verifying
+//    the double sighting (mechanism 5)
 //
-// NOTA sulle sprite: front_sprite_url e back_sprite_url restano
-// ancora placeholder (= la foto originale). Vedi README per lo stato
-// della pipeline di generazione immagini.
+// NOTE on sprites: front_sprite_url and back_sprite_url are still
+// placeholders (= the original photo). See the README for the
+// status of the image-generation pipeline.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assignTypes, type CaptureContextJson } from "./typing_engine.ts";
@@ -30,27 +31,27 @@ export async function finalizeCapture(
 ) {
   const { userId, originalPhotoUrl, speciesHint, context } = input;
 
-  // 1. Tipo: alla cattura la creatura ha SEMPRE un solo tipo, anche
-  //    se assignTypes può restituirne 2 (quel caso è per l'evoluzione).
+  // 1. Type: at capture the Wildkin ALWAYS has a single type, even
+  //    though assignTypes can return 2 (that case is for evolution).
   const types = [assignTypes(context)[0]];
 
-  // 2. Statistiche base.
+  // 2. Base stats.
   const baseStats = generateBaseStats(types);
 
-  // 3. Le 4 mosse iniziali, coerenti col tipo.
+  // 3. The 4 starting moves, matching the type.
   const moves = starterMoves(types).map((move) => ({
     move,
     current_pp: move.max_pp,
   }));
 
-  // 4. Piano evolutivo (stadi + soglie nascoste).
+  // 4. Evolution plan (stages + hidden thresholds).
   const evolutionPlan = createInitialEvolutionPlan();
 
-  // 5. Statistiche effettive a livello 5.
+  // 5. Effective stats at level 5.
   const level = 5;
   const maxHp = Math.floor((2 * baseStats.hp * level) / 100) + level + 10;
 
-  // 6. Sprite — PLACEHOLDER, vedi nota in cima al file.
+  // 6. Sprites — PLACEHOLDER, see the note at the top of the file.
   const frontSpriteUrl = originalPhotoUrl;
   const backSpriteUrl = originalPhotoUrl;
 
@@ -85,7 +86,7 @@ export async function finalizeCapture(
     .single();
 
   if (insertError) {
-    throw new Error(`Impossibile salvare la creatura: ${insertError.message}`);
+    throw new Error(`Could not save the Wildkin: ${insertError.message}`);
   }
 
   return inserted;

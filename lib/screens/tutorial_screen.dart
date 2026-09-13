@@ -8,15 +8,15 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import 'home_screen.dart';
 
-/// Un singolo passaggio in un diagramma a frecce (icona in un
-/// cerchio colorato + didascalia opzionale sotto). Se [imageAsset] è
-/// presente, mostra quell'immagine al posto di icona+colore (usato
-/// per i badge dei tipi, vedi TypeBadgeAssets).
+/// A single step in an arrow diagram (an icon in a colored circle +
+/// an optional caption below). If [imageAsset] is set, that image is
+/// shown instead of icon+color (used for type badges, see
+/// TypeBadgeAssets).
 class _FlowStep {
   final IconData icon;
   final Color color;
   final String? caption;
-  final bool faded; // per rappresentare uno stadio "incerto" (es. seconda evoluzione)
+  final bool faded; // used to represent an "uncertain" stage (e.g. second evolution)
   final String? imageAsset;
 
   const _FlowStep({
@@ -33,7 +33,7 @@ class _TutorialPage {
   final String title;
   final String body;
   final List<_FlowStep>? flow;
-  final List<String>? arrowLabels; // etichetta sopra ciascuna freccia, opzionale
+  final List<String>? arrowLabels; // label above each arrow, optional
 
   const _TutorialPage({
     required this.icon,
@@ -47,91 +47,91 @@ class _TutorialPage {
 final _pages = [
   const _TutorialPage(
     icon: Icons.auto_awesome,
-    title: 'Benvenuto in WildKin!',
-    body: 'Fotografa un animale reale intorno a te: l\'app lo trasforma in una '
-        'creatura da collezione tutta sua. Più animali fotografi, più ne scopri.',
+    title: 'Welcome to Wildkin!',
+    body: 'Photograph a real animal around you: the app turns it into a '
+        'one-of-a-kind collectible Wildkin. The more animals you photograph, '
+        'the more you discover.',
   ),
   _TutorialPage(
     icon: Icons.camera_alt,
-    title: 'Come si cattura',
-    body: 'Punta la fotocamera sull\'animale e tienila ferma: scatta da sola '
-        'appena sei stabile (oppure premi il pulsante quando vuoi tu). Niente '
-        'foto dalla galleria: deve essere un animale reale, visto ora.',
+    title: 'How to capture',
+    body: 'Point the camera at the animal and hold it steady: it fires on '
+        'its own once you\'re stable (or press the button whenever you want). '
+        'No photos from the gallery: it has to be a real animal, seen right now.',
     flow: [
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.sapphireBlue, caption: 'Inquadri'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: 'Animale reale'),
-      const _FlowStep(icon: Icons.catching_pokemon, color: AppColors.rubyRed, caption: 'Creatura'),
+      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: 'You aim'),
+      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: 'Real animal'),
+      const _FlowStep(icon: Icons.auto_awesome, color: AppColors.emberRed, caption: 'Wildkin'),
     ],
   ),
   _TutorialPage(
     icon: Icons.timer,
-    title: 'Due scatti per essere sicuri',
-    body: 'Dopo il primo scatto hai 20 minuti per confermare, ritrovando lo '
-        'stesso animale e fotografandolo di nuovo da vicino a dove l\'hai '
-        'visto la prima volta. Serve a essere sicuri che sia vero, non una '
-        'foto trovata online.',
+    title: 'Two shots to be sure',
+    body: 'After the first shot you have 20 minutes to confirm, by finding '
+        'the same animal again and photographing it close to where you first '
+        'saw it. This makes sure it\'s real, not a photo found online.',
     flow: [
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.sapphireBlue, caption: '1° scatto'),
-      const _FlowStep(icon: Icons.camera_alt, color: AppColors.sapphireBlue, caption: '2° scatto'),
-      const _FlowStep(icon: Icons.check_circle, color: AppColors.grassGreen, caption: 'Cattura!'),
+      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: '1st shot'),
+      const _FlowStep(icon: Icons.camera_alt, color: AppColors.tidalBlue, caption: '2nd shot'),
+      const _FlowStep(icon: Icons.check_circle, color: AppColors.grassGreen, caption: 'Captured!'),
     ],
-    arrowLabels: ['entro 20 min', ''],
+    arrowLabels: ['within 20 min', ''],
   ),
   _TutorialPage(
     icon: Icons.public,
-    title: 'Il tipo dipende da dove sei',
-    body: 'Il tipo della creatura non è casuale del tutto: dipende dal meteo, '
-        'l\'ora del giorno, la stagione e il luogo. Qui un esempio: giornata '
-        'calda d\'estate. Trovi tutti i dettagli nel menu Aiuto.',
+    title: 'The type depends on where you are',
+    body: 'A Wildkin\'s type isn\'t entirely random: it depends on the '
+        'weather, time of day, season, and place. Here\'s an example: a hot '
+        'summer day. Find all the details in the Help menu.',
     flow: [
-      const _FlowStep(icon: Icons.wb_sunny, color: Color(0xFFF2A93B), caption: 'Caldo, estate'),
+      const _FlowStep(icon: Icons.wb_sunny, color: Color(0xFFF2A93B), caption: 'Hot, summer'),
       _FlowStep(
         icon: Icons.circle,
         color: Colors.transparent,
-        caption: 'Fuoco',
-        imageAsset: TypeBadgeAssets.of('fuoco'),
+        caption: 'Fire',
+        imageAsset: TypeBadgeAssets.of('fire'),
       ),
       _FlowStep(
         icon: Icons.circle,
         color: Colors.transparent,
-        caption: 'Terra',
-        imageAsset: TypeBadgeAssets.of('terra'),
+        caption: 'Ground',
+        imageAsset: TypeBadgeAssets.of('ground'),
       ),
     ],
   ),
   _TutorialPage(
     icon: Icons.upgrade,
-    title: 'Le creature crescono ed evolvono',
-    body: 'Ogni creatura parte al livello 5 con un solo tipo. Con il tempo può '
-        'evolversi una o due volte, guadagnando un secondo tipo legato al '
-        'luogo e al momento dell\'evoluzione. Non saprai mai il livello '
-        'esatto: solo un indizio approssimativo.',
+    title: 'Wildkin grow and evolve',
+    body: 'Every Wildkin starts at level 5 with a single type. Over time it '
+        'can evolve once or twice, gaining a second type tied to the place '
+        'and moment of the evolution. You\'ll never know the exact level: '
+        'only a rough hint.',
     flow: [
-      const _FlowStep(icon: Icons.pets, color: AppColors.sapphireBlue, caption: 'Base\nLv. 5'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: '2° stadio'),
-      const _FlowStep(icon: Icons.pets, color: AppColors.rubyRed, caption: '3° stadio?', faded: true),
+      const _FlowStep(icon: Icons.pets, color: AppColors.tidalBlue, caption: 'Base\nLv. 5'),
+      const _FlowStep(icon: Icons.pets, color: AppColors.grassGreen, caption: 'Stage 2'),
+      const _FlowStep(icon: Icons.pets, color: AppColors.emberRed, caption: 'Stage 3?', faded: true),
     ],
     arrowLabels: ['?', '?'],
   ),
   const _TutorialPage(
-    icon: Icons.catching_pokemon,
-    title: 'Livelli, mosse e battaglie',
-    body: 'Le creature salgono di livello combattendo contro altri animali che '
-        'fotografi. Iniziano con 4 mosse legate al loro tipo e ne sbloccano di '
-        'più forti crescendo. Più indebolisci un animale in battaglia, più '
-        'facile sarà catturarlo.',
+    icon: Icons.sports_martial_arts,
+    title: 'Levels, moves, and battles',
+    body: 'Wildkin level up by battling other animals you photograph. They '
+        'start with 4 moves tied to their type and unlock stronger ones as '
+        'they grow. The more you weaken an animal in battle, the easier it '
+        'will be to catch.',
     flow: [
-      _FlowStep(icon: Icons.sports_martial_arts, color: AppColors.rubyRed, caption: 'Battaglia'),
-      _FlowStep(icon: Icons.trending_up, color: AppColors.grassGreen, caption: 'Sale di livello'),
-      _FlowStep(icon: Icons.auto_fix_high, color: AppColors.sapphireBlue, caption: 'Mossa nuova'),
+      _FlowStep(icon: Icons.sports_martial_arts, color: AppColors.emberRed, caption: 'Battle'),
+      _FlowStep(icon: Icons.trending_up, color: AppColors.grassGreen, caption: 'Levels up'),
+      _FlowStep(icon: Icons.auto_fix_high, color: AppColors.tidalBlue, caption: 'New move'),
     ],
   ),
 ];
 
-/// Tutorial a pagine. Mostrato automaticamente al primo avvio (vedi
-/// AppGate), oppure richiamabile in ogni momento dal menu Aiuto sulla
-/// home — in quel caso [isFirstLaunch] è false e "chiudi" torna
-/// semplicemente indietro invece di andare alla home.
+/// Page-based tutorial. Shown automatically on first launch (see
+/// AppGate), or reachable anytime from the Help menu on the home
+/// screen — in that case [isFirstLaunch] is false and "close" simply
+/// goes back instead of going to the home screen.
 class TutorialScreen extends StatefulWidget {
   final bool isFirstLaunch;
 
@@ -187,7 +187,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 child: TextButton(
                   onPressed: _finish,
                   child: Text(
-                    widget.isFirstLaunch ? 'SALTA' : 'CHIUDI',
+                    widget.isFirstLaunch ? 'SKIP' : 'CLOSE',
                     style: AppFonts.body(color: AppColors.panelBrown, fontSize: 15),
                   ),
                 ),
@@ -205,7 +205,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: PixelButton(
-                  label: isLast ? 'INIZIA!' : 'AVANTI',
+                  label: isLast ? 'START!' : 'NEXT',
                   icon: isLast ? Icons.play_arrow : Icons.arrow_forward,
                   background: AppColors.grassGreen,
                   onPressed: _next,
@@ -264,10 +264,10 @@ class _TutorialPageView extends StatelessWidget {
   }
 }
 
-/// Diagramma "icona → freccia → icona" usato per illustrare i concetti
-/// del tutorial senza dover disegnare vere illustrazioni: solo forme
-/// geometriche generiche (cerchi, icone Material, frecce), niente
-/// materiale protetto da copyright.
+/// "Icon → arrow → icon" diagram used to illustrate the tutorial's
+/// concepts without needing real illustrations: just generic
+/// geometric shapes (circles, Material icons, arrows), no
+/// copyrighted material.
 class _FlowDiagram extends StatelessWidget {
   final List<_FlowStep> steps;
   final List<String>? arrowLabels;
@@ -384,7 +384,7 @@ class _DotsIndicator extends StatelessWidget {
           width: active ? 22 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: active ? AppColors.rubyRed : AppColors.panelBrown.withOpacity(0.25),
+            color: active ? AppColors.emberRed : AppColors.panelBrown.withOpacity(0.25),
             borderRadius: BorderRadius.circular(4),
           ),
         );

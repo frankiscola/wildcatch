@@ -1,10 +1,10 @@
-/// Enum dei "biomi" rilevati dalla posizione GPS.
-/// Usato dal motore di tipizzazione per pesare le probabilità.
-enum Biome { mare, montagna, foresta, cittaUrbana, pianura, deserto, sconosciuto }
+/// Enum of the "biomes" detected from GPS location.
+/// Used by the typing engine to weight type probabilities.
+enum Biome { sea, mountain, forest, urbanCity, plain, desert, unknown }
 
-/// Tutti i dati contestuali raccolti al momento dello scatto.
-/// Questo oggetto viene inviato integralmente alla edge function
-/// Supabase, che lo usa per determinare il tipo della creatura.
+/// All contextual data collected at the moment the photo is taken.
+/// This object is sent in full to the Supabase edge function, which
+/// uses it to determine the Wildkin's type.
 class CaptureContext {
   final DateTime capturedAt;
   final double latitude;
@@ -12,17 +12,17 @@ class CaptureContext {
   final double? elevationMeters;
   final Biome biome;
 
-  final String weatherCondition; // es. "clear", "rain", "snow", "storm"
+  final String weatherCondition; // e.g. "clear", "rain", "snow", "storm"
   final double temperatureCelsius;
   final double humidityPercent;
   final double windSpeedKmh;
 
-  /// Segnali anti-spoofing calcolati sul dispositivo durante lo scatto
-  /// (vedi LivenessService). Il server li tratta come indizi, MAI come
-  /// verità assoluta: un client manomesso potrebbe sempre inviare valori
-  /// falsi. Il controllo davvero robusto resta il doppio avvistamento
-  /// server-side (vedi resolve-sighting), che non dipende da quello che
-  /// il client dichiara di aver misurato.
+  /// Anti-spoofing signals computed on-device at capture time (see
+  /// LivenessService). The server treats them as clues, NEVER as
+  /// absolute truth: a tampered client could always send fake
+  /// values. The truly robust check remains the server-side double
+  /// sighting (see resolve-sighting), which doesn't depend on what
+  /// the client claims to have measured.
   final LivenessReport? liveness;
 
   const CaptureContext({
@@ -34,11 +34,11 @@ class CaptureContext {
     required this.humidityPercent,
     required this.windSpeedKmh,
     this.elevationMeters,
-    this.biome = Biome.sconosciuto,
+    this.biome = Biome.unknown,
     this.liveness,
   });
 
-  /// true se lo scatto è avvenuto tra il tramonto e l'alba.
+  /// true if the photo was taken between sunset and sunrise.
   bool get isNightTime {
     final hour = capturedAt.hour;
     return hour >= 20 || hour < 6;
@@ -46,10 +46,10 @@ class CaptureContext {
 
   String get season {
     final month = capturedAt.month;
-    if (month == 12 || month <= 2) return 'inverno';
-    if (month <= 5) return 'primavera';
-    if (month <= 8) return 'estate';
-    return 'autunno';
+    if (month == 12 || month <= 2) return 'winter';
+    if (month <= 5) return 'spring';
+    if (month <= 8) return 'summer';
+    return 'fall';
   }
 
   Map<String, dynamic> toJson() => {
@@ -68,35 +68,34 @@ class CaptureContext {
       };
 }
 
-/// Esito dell'analisi di "vivezza" dello scatto (meccanismi 1+3 del
-/// piano anti-cattura-da-internet): un punteggio di parallasse tra i
-/// frame del burst e la conferma che il telefono si sia fisicamente
-/// mosso durante la cattura. Vedi LivenessService per il calcolo.
+/// Result of the shot's "liveness" analysis (mechanisms 1+3 of the
+/// anti-photo-of-a-screen plan): a parallax score across the burst
+/// frames, plus confirmation that the phone physically moved during
+/// capture. See LivenessService for the calculation.
 class LivenessReport {
-  /// Quanto i "blocchi" dell'immagine si sono mossi in modo
-  /// disomogeneo tra un frame e l'altro del burst. Alto = scena 3D
-  /// reale (parallasse presente). Vicino a zero = molto probabilmente
-  /// una superficie piatta (foto, schermo, rivista) semplicemente
-  /// traslata rigidamente davanti alla camera.
+  /// How unevenly the image "blocks" moved from one burst frame to
+  /// the next. High = a real 3D scene (parallax present). Near zero
+  /// = most likely a flat surface (a photo, a screen, a magazine)
+  /// simply translated rigidly in front of the camera.
   final double parallaxVarianceScore;
 
-  /// Motion totale rilevato tra i frame, indipendentemente dalla sua
-  /// distribuzione. Serve a scartare il caso limite di un telefono
-  /// tenuto perfettamente fermo (es. su un supporto) che punta a
-  /// un'immagine statica: lì la parallasse sarebbe comunque ~0 ma
-  /// vogliamo distinguerlo esplicitamente da "nessun movimento affatto".
+  /// Total motion detected across the frames, regardless of how it's
+  /// distributed. Used to rule out the edge case of a phone held
+  /// perfectly still (e.g. on a stand) pointed at a static image:
+  /// there the parallax would still be ~0, but we want to tell that
+  /// apart explicitly from "no movement at all".
   final double totalMotionScore;
 
-  /// Integrale del modulo della velocità angolare (giroscopio) durante
-  /// la finestra di cattura. Un vero scatto a mano libera produce
-  /// sempre un minimo di micro-tremore; un telefono fissato su un
-  /// cavalletto puntato su un poster, molto meno.
+  /// Integral of the angular velocity magnitude (gyroscope) during
+  /// the capture window. A genuine handheld shot always produces at
+  /// least a little micro-tremor; a phone mounted on a tripod
+  /// pointed at a poster, much less.
   final double gyroMotionMagnitude;
 
-  /// True se, incrociando i tre segnali sopra, la cattura sembra
-  /// avvenuta davanti a una superficie piatta invece che a una scena
-  /// 3D reale. Calcolato lato client in LivenessService, RICALCOLATO
-  /// anche lato server dove possibile: qui viaggia solo come indizio.
+  /// True if, combining the three signals above, the capture looks
+  /// like it happened in front of a flat surface rather than a real
+  /// 3D scene. Computed client-side in LivenessService, RECOMPUTED
+  /// server-side where possible: here it only travels as a hint.
   final bool looksLikeFlatSurface;
 
   const LivenessReport({
