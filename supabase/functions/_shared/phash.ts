@@ -26,11 +26,26 @@ import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 export async function computeAverageHash(photoUrl: string): Promise<string> {
   const response = await fetch(photoUrl);
   if (!response.ok) {
-    throw new Error(`Photo unreachable for hashing: ${response.status}`);
+    throw new Error(`Photo unreachable for hashing: ${response.status} (url: ${photoUrl})`);
   }
-  const bytes = new Uint8Array(await response.arrayBuffer());
 
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("image/")) {
+    throw new Error(
+      `URL did not return an image (content-type: "${contentType}"). ` +
+        `Check that the 'captures' bucket is public and the URL is correct: ${photoUrl}`,
+    );
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
   const image = await Image.decode(bytes);
+
+  if (image.width < 1 || image.height < 1) {
+    throw new Error(
+      `Decoded image has invalid dimensions (${image.width}x${image.height}) for url: ${photoUrl}`,
+    );
+  }
+
   const small = image.resize(8, 8);
 
   const grays: number[] = [];

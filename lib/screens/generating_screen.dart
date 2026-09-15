@@ -106,6 +106,21 @@ class GeneratingScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                 ],
                 GbaDialogBox(text: _messageFor(state.step), fontSize: 18),
+                if (state.step == CaptureStep.error && state.errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SelectableText(
+                      state.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
                 if (state.step == CaptureStep.sightingExpired) ...[
                   const SizedBox(height: 20),
                   PixelButton(

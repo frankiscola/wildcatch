@@ -86,7 +86,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final notifier = ref.read(captureFlowProvider.notifier);
 
     if (!mounted) return;
-    await Navigator.of(context).push(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GeneratingScreen(isConfirmation: widget.isConfirmation),
       ),
@@ -310,14 +310,14 @@ class _RejectionBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.emberRed.withValues(alpha: 0.15),
+        color: AppColors.emberRed.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.emberRed),
       ),
       child: Text(
         // ignore: avoid_dynamic_calls
         (reason as dynamic).userMessage as String,
-        style: TextStyle(color: AppColors.emberRed.withValues(alpha: 0.9)),
+        style: TextStyle(color: AppColors.emberRed.withOpacity(0.9)),
         textAlign: TextAlign.center,
       ),
     );
