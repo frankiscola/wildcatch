@@ -19,7 +19,7 @@
 // Version verified at the time this file was written (September
 // 2026): still worth checking https://deno.land/x/imagescript for a
 // newer one before deploying.
-import { Image } from "https://deno.land/x/[email protected]/mod.ts";
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 /// Computes the aHash (64 bits, as a 16-character hex string) of an
 /// image downloaded from `photoUrl`.
