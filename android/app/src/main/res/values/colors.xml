@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same blue as AppColors.routeSkyTop in the Flutter app, used
+         as the native splash background so there's no flash of a
+         different color before Flutter draws its first frame. -->
+    <color name="splash_background">#4FB3E8</color>
+</resources>

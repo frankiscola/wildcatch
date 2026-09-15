@@ -105,12 +105,10 @@ class _TitleLockup extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Text(
-                'WILDKIN',
-                style: AppFonts.pixelTitle(
-                  fontSize: 22,
-                  color: AppColors.emberRed,
-                ),
+              Image.asset(
+                'assets/branding/wordmark.png',
+                width: 220,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 6),
               Text(
