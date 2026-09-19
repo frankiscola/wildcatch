@@ -56,7 +56,7 @@ List<Wildkin> buildSampleWildkin() {
     level: 35,
     currentExp: 0,
     currentHp: 58,
-    baseStats: const BaseStats(hp: 62, attack: 55, defense: 50, insight: 60, ward: 58, speed: 70),
+    baseStats: const BaseStats(hp: 62, attack: 55, defense: 50, elementalAttack: 60, elementalDefense: 58, speed: 70),
     moves: const [
       LearnedMove(
         move: Move(name: 'Glacial Ray', type: 'ice', category: MoveCategory.special, power: 90, accuracy: 100, maxPp: 10, tier: 2),
@@ -92,7 +92,7 @@ List<Wildkin> buildSampleWildkin() {
     level: 14,
     currentExp: 0,
     currentHp: 34,
-    baseStats: const BaseStats(hp: 45, attack: 40, defense: 35, insight: 45, ward: 40, speed: 65),
+    baseStats: const BaseStats(hp: 45, attack: 40, defense: 35, elementalAttack: 45, elementalDefense: 40, speed: 65),
     moves: const [
       LearnedMove(
         move: Move(name: 'Wing Jab', type: 'flying', category: MoveCategory.physical, power: 35, accuracy: 100, maxPp: 35, tier: 1),
@@ -127,7 +127,7 @@ List<Wildkin> buildSampleWildkin() {
     level: 8,
     currentExp: 0,
     currentHp: 22,
-    baseStats: const BaseStats(hp: 40, attack: 35, defense: 45, insight: 30, ward: 35, speed: 25),
+    baseStats: const BaseStats(hp: 40, attack: 35, defense: 45, elementalAttack: 30, elementalDefense: 35, speed: 25),
     moves: const [
       LearnedMove(
         move: Move(name: 'Toxic Soot', type: 'poison', category: MoveCategory.special, power: 40, accuracy: 100, maxPp: 25, tier: 1),

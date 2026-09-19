@@ -17,10 +17,9 @@
 const OPENAI_MODEL = "gpt-image-2.5-sunburst";
 const OPENAI_EDIT_URL = "https://api.openai.com/v1/images/edits";
 
-// Modello di visione economico per il controllo di plausibilità
-// (askAboutImages). VERIFICARE anche questo prima del deploy: serve
-// solo un sì/no testuale su due immagini, non serve il modello più
-// potente disponibile.
+// Cheap vision model for the plausibility check (askAboutImages).
+// Also VERIFY this before deploying: it only needs a plain yes/no on
+// two images, no need for the most powerful model available.
 const OPENAI_VISION_MODEL = "gpt-4o-mini";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -38,24 +37,23 @@ function apiKey(): string {
   const key = Deno.env.get("OPENAI_API_KEY");
   if (!key) {
     throw new Error(
-      "OPENAI_API_KEY non configurata. Imposta con: supabase secrets set OPENAI_API_KEY=...",
+      "OPENAI_API_KEY not set. Configure it with: supabase secrets set OPENAI_API_KEY=...",
     );
   }
   return key;
 }
 
-/// Genera un'immagine a partire da un prompt testuale e 1+ immagini
-/// di riferimento (l'endpoint /images/edits richiede almeno
-/// un'immagine in ingresso). Lancia un'eccezione in caso di
-/// problema — chi chiama deve gestire il fallback (vedi
-/// sprite_pipeline.ts): un intoppo della generazione non deve mai
-/// far fallire una cattura.
+/// Generates an image from a text prompt and 1+ reference images
+/// (the /images/edits endpoint requires at least one input image).
+/// Throws on any problem — the caller is responsible for the
+/// fallback (see sprite_pipeline.ts): a generation hiccup should
+/// never fail a capture.
 export async function generateImage(
   prompt: string,
   references: ImageReference[],
 ): Promise<GeneratedImage> {
   if (references.length === 0) {
-    throw new Error("generateImage richiede almeno un'immagine di riferimento.");
+    throw new Error("generateImage requires at least one reference image.");
   }
 
   const form = new FormData();
@@ -82,15 +80,15 @@ export async function generateImage(
   const data = await response.json();
   const b64 = data?.data?.[0]?.b64_json;
   if (!b64) {
-    throw new Error("OpenAI non ha restituito nessuna immagine (risposta inattesa).");
+    throw new Error("OpenAI did not return any image (unexpected response).");
   }
 
   return { bytes: base64Decode(b64), mimeType: "image/png" };
 }
 
-/// Pone una domanda a risposta breve su una o più immagini (usato per
-/// il controllo di plausibilità fronte/retro, vedi sprite_pipeline.ts).
-/// Ritorna il testo grezzo della risposta.
+/// Asks a short-answer question about one or more images (used for
+/// the front/back plausibility check, see sprite_pipeline.ts).
+/// Returns the raw response text.
 export async function askAboutImages(
   question: string,
   images: ImageReference[],
@@ -125,8 +123,8 @@ export async function askAboutImages(
   return data?.choices?.[0]?.message?.content ?? "";
 }
 
-// Deno non ha Buffer: piccoli helper base64 fatti a mano, a chunk per
-// non rischiare "Maximum call stack size exceeded" su immagini grandi.
+// Deno has no Buffer: small hand-rolled base64 helpers, chunked to
+// avoid "Maximum call stack size exceeded" on large images.
 function base64Encode(bytes: Uint8Array): string {
   const chunkSize = 8192;
   let binary = "";

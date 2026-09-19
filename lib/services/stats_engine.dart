@@ -17,15 +17,15 @@ class StatsEngine {
   StatsEngine({Random? random}) : _random = random ?? Random();
 
   static const Map<String, Map<String, int>> _typeBias = {
-    'fire': {'attack': 6, 'insight': 6, 'speed': 3},
-    'water': {'defense': 4, 'ward': 5, 'hp': 3},
-    'grass': {'insight': 4, 'ward': 4, 'hp': 3},
-    'electric': {'speed': 8, 'insight': 4},
-    'ice': {'ward': 5, 'defense': 3},
-    'poison': {'insight': 3, 'speed': 2},
+    'fire': {'attack': 6, 'elemental_attack': 6, 'speed': 3},
+    'water': {'defense': 4, 'elemental_defense': 5, 'hp': 3},
+    'grass': {'elemental_attack': 4, 'elemental_defense': 4, 'hp': 3},
+    'electric': {'speed': 8, 'elemental_attack': 4},
+    'ice': {'elemental_defense': 5, 'defense': 3},
+    'poison': {'elemental_attack': 3, 'speed': 2},
     'ground': {'attack': 5, 'defense': 5},
-    'flying': {'speed': 7, 'insight': 3},
-    'psychic': {'insight': 8, 'ward': 3},
+    'flying': {'speed': 7, 'elemental_attack': 3},
+    'psychic': {'elemental_attack': 8, 'elemental_defense': 3},
     'rock': {'defense': 9, 'hp': 3},
     'dark': {'attack': 5, 'speed': 5},
   };
@@ -35,8 +35,8 @@ class StatsEngine {
       'hp': 20 + _random.nextInt(15),
       'attack': 15 + _random.nextInt(15),
       'defense': 15 + _random.nextInt(15),
-      'insight': 15 + _random.nextInt(15),
-      'ward': 15 + _random.nextInt(15),
+      'elemental_attack': 15 + _random.nextInt(15),
+      'elemental_defense': 15 + _random.nextInt(15),
       'speed': 15 + _random.nextInt(15),
     };
 
@@ -52,8 +52,8 @@ class StatsEngine {
       hp: values['hp']!,
       attack: values['attack']!,
       defense: values['defense']!,
-      insight: values['insight']!,
-      ward: values['ward']!,
+      elementalAttack: values['elemental_attack']!,
+      elementalDefense: values['elemental_defense']!,
       speed: values['speed']!,
     );
   }
@@ -66,8 +66,8 @@ class StatsEngine {
   /// and [TypeChart.matchupsFor] finds a net defensive liability
   /// (more x4 weaknesses than x4 resistances — see
   /// [WildkinMatchups.hasNetQuadWeakness]), a small extra bonus is
-  /// applied to the purely defensive stats (HP/defense/ward) only.
-  /// This is deliberately NOT applied to attack/insight/speed: the
+  /// applied to the purely defensive stats (HP/defense/elementalDefense) only.
+  /// This is deliberately NOT applied to attack/elementalAttack/speed: the
   /// goal is to help a Wildkin survive the hits it's especially
   /// vulnerable to, not to make it hit harder — and it's meant as a
   /// light compensation on top of [EvolutionEngine]'s own risk-aware
@@ -79,23 +79,23 @@ class StatsEngine {
     var hp = boosted(current.hp);
     var attack = boosted(current.attack);
     var defense = boosted(current.defense);
-    var insight = boosted(current.insight);
-    var ward = boosted(current.ward);
+    var elementalAttack = boosted(current.elementalAttack);
+    var elementalDefense = boosted(current.elementalDefense);
     var speed = boosted(current.speed);
 
     if (types != null && TypeChart.matchupsFor(types).hasNetQuadWeakness) {
       const compensation = 1.08;
       hp = (hp * compensation).round();
       defense = (defense * compensation).round();
-      ward = (ward * compensation).round();
+      elementalDefense = (elementalDefense * compensation).round();
     }
 
     return BaseStats(
       hp: hp,
       attack: attack,
       defense: defense,
-      insight: insight,
-      ward: ward,
+      elementalAttack: elementalAttack,
+      elementalDefense: elementalDefense,
       speed: speed,
     );
   }

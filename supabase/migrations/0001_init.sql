@@ -21,7 +21,7 @@ create table if not exists captures (
   current_exp int not null default 0,
   current_hp int not null,
 
-  base_stats jsonb not null,       -- {hp, attack, defense, insight, ward, speed}
+  base_stats jsonb not null,       -- {hp, attack, defense, elementalAttack, elementalDefense, speed}
   moves jsonb not null,            -- [{move: {...}, current_pp}, ...]
   evolution_plan jsonb not null,   -- {total_stages, current_stage, next_evolution_level, second_evolution_level}
 

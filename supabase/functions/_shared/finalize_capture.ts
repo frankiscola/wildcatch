@@ -15,7 +15,7 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assignTypes, type CaptureContextJson } from "./typing_engine.ts";
-import { generateBaseStats } from "./stats_engine.ts";
+import { generateBaseStats, serializeBaseStats } from "./stats_engine.ts";
 import { starterMoves } from "./movepool.ts";
 import { createInitialEvolutionPlan } from "./evolution.ts";
 import { generateSprites } from "./sprite_pipeline.ts";
@@ -90,7 +90,7 @@ export async function finalizeCapture(
     level,
     current_exp: 0,
     current_hp: maxHp,
-    base_stats: baseStats,
+    base_stats: serializeBaseStats(baseStats),
     moves,
     evolution_plan: evolutionPlan,
     captured_at: context.captured_at,
@@ -119,7 +119,7 @@ export async function finalizeCapture(
 async function fetchAsBytes(url: string): Promise<Uint8Array> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Impossibile scaricare la foto originale (status ${response.status}).`);
+    throw new Error(`Could not download the original photo (status ${response.status}).`);
   }
   return new Uint8Array(await response.arrayBuffer());
 }
@@ -128,7 +128,7 @@ function guessMimeType(url: string): string {
   const lower = url.toLowerCase();
   if (lower.endsWith(".png")) return "image/png";
   if (lower.endsWith(".webp")) return "image/webp";
-  return "image/jpeg"; // la fotocamera del client scatta sempre in JPEG, vedi camera_capture_service.dart
+  return "image/jpeg"; // the client's camera always shoots JPEG, see camera_capture_service.dart
 }
 
 async function uploadOrThrow(
@@ -140,6 +140,6 @@ async function uploadOrThrow(
     .from("captures")
     .upload(path, image.bytes, { contentType: image.mimeType, upsert: false });
   if (error) {
-    throw new Error(`Upload sprite fallito (${path}): ${error.message}`);
+    throw new Error(`Sprite upload failed (${path}): ${error.message}`);
   }
 }

@@ -6,16 +6,16 @@ class BaseStats {
   final int hp;
   final int attack;
   final int defense;
-  final int insight; // special attack
-  final int ward; // special defense
+  final int elementalAttack; // special attack
+  final int elementalDefense; // special defense
   final int speed;
 
   const BaseStats({
     required this.hp,
     required this.attack,
     required this.defense,
-    required this.insight,
-    required this.ward,
+    required this.elementalAttack,
+    required this.elementalDefense,
     required this.speed,
   });
 
@@ -23,8 +23,8 @@ class BaseStats {
         'hp': hp,
         'attack': attack,
         'defense': defense,
-        'insight': insight,
-        'ward': ward,
+        'elemental_attack': elementalAttack,
+        'elemental_defense': elementalDefense,
         'speed': speed,
       };
 
@@ -32,8 +32,11 @@ class BaseStats {
         hp: json['hp'] as int,
         attack: json['attack'] as int,
         defense: json['defense'] as int,
-        insight: json['insight'] as int,
-        ward: json['ward'] as int,
+        // Fallback to the old 'insight'/'ward' keys for Wildkin captured
+        // before the elemental_attack/elemental_defense rename, so
+        // already-saved rows keep loading without a DB migration.
+        elementalAttack: (json['elemental_attack'] ?? json['insight']) as int,
+        elementalDefense: (json['elemental_defense'] ?? json['ward']) as int,
         speed: json['speed'] as int,
       );
 }
@@ -43,16 +46,16 @@ class ComputedStats {
   final int maxHp;
   final int attack;
   final int defense;
-  final int insight;
-  final int ward;
+  final int elementalAttack;
+  final int elementalDefense;
   final int speed;
 
   const ComputedStats({
     required this.maxHp,
     required this.attack,
     required this.defense,
-    required this.insight,
-    required this.ward,
+    required this.elementalAttack,
+    required this.elementalDefense,
     required this.speed,
   });
 }

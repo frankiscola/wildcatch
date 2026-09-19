@@ -69,8 +69,8 @@ class Wildkin {
       maxHp: maxHp,
       attack: statAt(baseStats.attack),
       defense: statAt(baseStats.defense),
-      insight: statAt(baseStats.insight),
-      ward: statAt(baseStats.ward),
+      elementalAttack: statAt(baseStats.elementalAttack),
+      elementalDefense: statAt(baseStats.elementalDefense),
       speed: statAt(baseStats.speed),
     );
   }

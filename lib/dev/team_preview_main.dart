@@ -13,7 +13,6 @@
 // here gets bundled into a real build.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/wildkin.dart';
 import '../providers/capture_flow_provider.dart';
 import '../screens/team_screen.dart';
 import '../theme/app_theme.dart';

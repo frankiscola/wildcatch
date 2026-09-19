@@ -46,18 +46,21 @@ class TeamScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'TEAM (${team.length}/$kMaxTeamSize)',
-                      style: AppFonts.pixelTitle(fontSize: 12, color: AppColors.panelBrown),
+                      style: AppFonts.pixelTitle(
+                          fontSize: 12, color: AppColors.panelBrown),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'These are the Wildkin that will fight for you when you '
                       'run into an animal in the wild.',
-                      style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
+                      style: AppFonts.body(
+                          fontSize: 13, color: AppColors.textMuted),
                     ),
                     const SizedBox(height: 14),
                     Expanded(
                       child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 14,
                           crossAxisSpacing: 14,
@@ -81,7 +84,8 @@ class TeamScreen extends ConsumerWidget {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(
-                child: GbaDialogBox(text: 'Could not load your team: $error', fontSize: 15),
+                child: GbaDialogBox(
+                    text: 'Could not load your team: $error', fontSize: 15),
               ),
             ),
           ),
@@ -109,7 +113,9 @@ class _TeamSlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = wildkin.computeStats();
-    final fraction = stats.maxHp == 0 ? 0.0 : (wildkin.currentHp / stats.maxHp).clamp(0.0, 1.0);
+    final fraction = stats.maxHp == 0
+        ? 0.0
+        : (wildkin.currentHp / stats.maxHp).clamp(0.0, 1.0);
     final hpColor = fraction > 0.5
         ? AppColors.grassGreen
         : (fraction > 0.2 ? const Color(0xFFE0A62B) : AppColors.emberRed);
@@ -126,7 +132,10 @@ class _TeamSlotCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.tidalBlue, width: 2),
           boxShadow: const [
-            BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+            BoxShadow(
+                color: AppColors.shadowSoft,
+                blurRadius: 8,
+                offset: Offset(0, 4)),
           ],
         ),
         padding: const EdgeInsets.all(10),
@@ -138,7 +147,8 @@ class _TeamSlotCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${wildkin.nickname}  ·  Lv.${wildkin.level}',
-              style: AppFonts.pixelTitle(fontSize: 8, color: AppColors.panelBrown),
+              style:
+                  AppFonts.pixelTitle(fontSize: 8, color: AppColors.panelBrown),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
@@ -149,7 +159,7 @@ class _TeamSlotCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 6,
-                backgroundColor: AppColors.panelBrown.withOpacity(0.2),
+                backgroundColor: AppColors.panelBrown.withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation(hpColor),
               ),
             ),
@@ -170,10 +180,10 @@ class _EmptySlotCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.panelCream.withOpacity(0.4),
+          color: AppColors.panelCream.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: AppColors.panelBrown.withOpacity(0.3),
+            color: AppColors.panelBrown.withValues(alpha: 0.3),
             width: 2,
           ),
         ),
@@ -184,7 +194,7 @@ class _EmptySlotCard extends StatelessWidget {
               Icon(
                 onTap == null ? Icons.lock_outline : Icons.add_circle_outline,
                 size: 32,
-                color: AppColors.panelBrown.withOpacity(0.5),
+                color: AppColors.panelBrown.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 6),
               Text(
@@ -245,15 +255,19 @@ class _BenchPickerSheetState extends State<_BenchPickerSheet> {
           children: [
             Text(
               'CHOOSE A WILDKIN',
-              style: AppFonts.pixelTitle(fontSize: 12, color: AppColors.emberRed),
+              style:
+                  AppFonts.pixelTitle(fontSize: 12, color: AppColors.emberRed),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 8),
-              Text(_errorMessage!, style: AppFonts.body(fontSize: 13, color: AppColors.emberRed)),
+              Text(_errorMessage!,
+                  style:
+                      AppFonts.body(fontSize: 13, color: AppColors.emberRed)),
             ],
             const SizedBox(height: 10),
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5),
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: widget.bench.length,
@@ -262,7 +276,8 @@ class _BenchPickerSheetState extends State<_BenchPickerSheet> {
                   final wildkin = widget.bench[index];
                   return ListTile(
                     tileColor: AppColors.panelCream,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     leading: SizedBox(
                       width: 40,
                       height: 40,

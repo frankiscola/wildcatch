@@ -1,29 +1,29 @@
-// Le immagini che escono dai modelli di generazione (OpenAI incluso)
-// sono sempre ad alta risoluzione (1024x1024 o più) e piene di
-// sfumature/anti-aliasing: anche chiedendo "stile pixel art", il
-// risultato NON ha davvero pochi pixel né una palette ridotta, quindi
-// il PNG compresso resta pesantissimo (la compressione senza perdita
-// sfrutta aree di colore identico, che qui non esistono).
+// Images coming out of generation models (OpenAI included) are
+// always high-resolution (1024x1024 or more) and full of
+// gradients/anti-aliasing: even when asking for a "pixel art style",
+// the result does NOT actually have few pixels or a reduced palette,
+// so the compressed PNG stays very heavy (lossless compression
+// relies on areas of identical color, which don't exist here).
 //
-// Ridimensionare a una vera risoluzione da sprite dopo la
-// generazione, prima di caricarlo su Supabase, risolve la
-// stragrande maggioranza del problema di peso — e per inciso rende
-// il risultato visivamente più coerente con lo stile retrò scelto
-// per il resto dell'app (font/dialog box in stile GBA).
+// Resizing to an actual sprite resolution after generation, before
+// uploading to Supabase, solves the vast majority of the file-size
+// problem — and incidentally makes the result visually more
+// consistent with the retro style chosen for the rest of the app
+// (GBA-style fonts/dialog boxes).
 //
-// Se 128px non bastasse a portare i file a un peso sufficientemente
-// piccolo, il prossimo passo (non ancora implementato qui) sarebbe
-// ridurre anche la palette di colori (es. a 32-64 colori), che
-// comprime molto meglio dello sfumato che esce dai modelli — ma vale
-// la pena provare prima il solo ridimensionamento.
+// If 128px isn't enough to bring file sizes down far enough, the
+// next step (not implemented here yet) would be to also reduce the
+// color palette (e.g. to 32-64 colors), which compresses much better
+// than the gradients coming out of the models — but it's worth
+// trying plain resizing first.
 
 import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
-/// Ridimensiona i byte PNG/JPEG in ingresso a un quadrato
-/// [size]x[size], preservando il canale alpha se presente. Ritorna
-/// sempre PNG (serve per mantenere la trasparenza).
+/// Resizes the input PNG/JPEG bytes to a [size]x[size] square,
+/// preserving the alpha channel if present. Always returns PNG
+/// (needed to keep transparency).
 export async function resizeToSpriteSize(bytes: Uint8Array, size = 128): Promise<Uint8Array> {
   const image = await Image.decode(bytes);
   const resized = image.resize(size, size);
-  return await resized.encode(); // encode() di ImageScript produce PNG per default
+  return await resized.encode(); // ImageScript's encode() produces PNG by default
 }

@@ -47,7 +47,7 @@ class BattleEngine {
     return _resolveAttack(
       move: move,
       attackerLevel: attacker.level,
-      attackStat: move.category == MoveCategory.physical ? stats.attack : stats.insight,
+      attackStat: move.category == MoveCategory.physical ? stats.attack : stats.elementalAttack,
       defenseStat: move.category == MoveCategory.physical
           ? _wildDefense(target)
           : _wildWard(target),
@@ -69,7 +69,7 @@ class BattleEngine {
       attackStat: move.category == MoveCategory.physical
           ? _wildAttack(attacker)
           : _wildInsight(attacker),
-      defenseStat: move.category == MoveCategory.physical ? stats.defense : stats.ward,
+      defenseStat: move.category == MoveCategory.physical ? stats.defense : stats.elementalDefense,
       targetCurrentHp: target.currentHp,
       defenderTypes: target.types,
     );
@@ -132,8 +132,8 @@ class BattleEngine {
   // Wildkin.computeStats() but applied to its baseStats.
   int _wildAttack(WildEncounter w) => _statAt(w.baseStats.attack, w.level);
   int _wildDefense(WildEncounter w) => _statAt(w.baseStats.defense, w.level);
-  int _wildInsight(WildEncounter w) => _statAt(w.baseStats.insight, w.level);
-  int _wildWard(WildEncounter w) => _statAt(w.baseStats.ward, w.level);
+  int _wildInsight(WildEncounter w) => _statAt(w.baseStats.elementalAttack, w.level);
+  int _wildWard(WildEncounter w) => _statAt(w.baseStats.elementalDefense, w.level);
 
   int _statAt(int base, int level) => (((2 * base) * level) / 100).floor() + 5;
 }

@@ -19,7 +19,7 @@ class TypeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withValues(alpha: 0.4),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -60,7 +60,7 @@ class TypeMatchupBadge extends StatelessWidget {
         border: isDoubledUp ? Border.all(color: Colors.white, width: 2) : null,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withValues(alpha: 0.4),
             blurRadius: isDoubledUp ? 6 : 4,
             offset: const Offset(0, 2),
           ),
