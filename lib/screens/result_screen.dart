@@ -457,11 +457,10 @@ class _StatBar extends StatelessWidget {
 
   const _StatBar({
     required this.label,
-    this.subtitle,
     required this.value,
     required this.max,
     required this.color,
-  });
+  }) : subtitle = null;
 
   @override
   Widget build(BuildContext context) {
@@ -490,7 +489,7 @@ class _StatBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(7),
               child: Stack(
                 children: [
-                  Container(height: 14, color: AppColors.dialogBorderOuter.withOpacity(0.12)),
+                  Container(height: 14, color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
                   FractionallySizedBox(
                     widthFactor: fraction,
                     child: Container(height: 14, color: color),

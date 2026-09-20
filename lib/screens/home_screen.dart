@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WILDKIN'),
+        // title: const Text('WILDKIN'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,6 +39,7 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _TitleLockup(),
+                Spacer(),
                 const SizedBox(height: 56),
                 PixelButton(
                   label: 'NEW CAPTURE',
@@ -53,7 +54,8 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.menu_book,
                   background: AppColors.tidalBlue,
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const FieldJournalScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const FieldJournalScreen()),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -67,15 +69,18 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 TextButton.icon(
-                  icon: const Icon(Icons.play_circle_outline, color: AppColors.panelBrown),
+                  icon: const Icon(Icons.play_circle_outline,
+                      color: AppColors.panelBrown),
                   label: Text(
                     'How does it work?',
-                    style: AppFonts.body(color: AppColors.panelBrown, fontSize: 15),
+                    style: AppFonts.body(
+                        color: AppColors.panelBrown, fontSize: 15),
                   ),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TutorialScreen()),
                   ),
                 ),
+                Spacer(),
               ],
             ),
           ),
@@ -90,35 +95,40 @@ class _TitleLockup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          decoration: BoxDecoration(
-            color: AppColors.panelCream,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadowSoft,
-                blurRadius: 14,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Image.asset(
-                'assets/branding/wordmark.png',
-                width: 220,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'edition',
-                style: AppFonts.body(fontSize: 18, color: AppColors.tidalBlue),
-              ),
-            ],
-          ),
+        Image.asset(
+          'assets/branding/wordmark.png',
+          width: 220,
+          fit: BoxFit.contain,
         ),
-        const SizedBox(height: 14),
+        // Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        //   decoration: BoxDecoration(
+        //     color: AppColors.panelCream,
+        //     borderRadius: BorderRadius.circular(24),
+        //     boxShadow: const [
+        //       BoxShadow(
+        //         color: AppColors.shadowSoft,
+        //         blurRadius: 14,
+        //         offset: Offset(0, 8),
+        //       ),
+        //     ],
+        //   ),
+        //   child: Column(
+        //     children: [
+        //       Image.asset(
+        //         'assets/branding/wordmark.png',
+        //         width: 220,
+        //         fit: BoxFit.contain,
+        //       ),
+        //       const SizedBox(height: 6),
+        //       Text(
+        //         'edition',
+        //         style: AppFonts.body(fontSize: 18, color: AppColors.tidalBlue),
+        //       ),
+        //     ],
+        //   ),
+        // ),
+        // const SizedBox(height: 14),
         Text(
           'Photograph an animal.\nDiscover the Wildkin hiding within.',
           textAlign: TextAlign.center,
