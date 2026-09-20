@@ -6,6 +6,13 @@ import '../models/capture_context.dart';
 /// Wraps all geolocation logic: permissions, GPS position,
 /// elevation, and biome estimation.
 class LocationService {
+  /// Quick check for whether location services are turned on at the
+  /// OS level, without requesting any permission or a position fix.
+  /// Meant to be called BEFORE starting a capture, so the app can
+  /// prompt the player to enable GPS up front instead of letting the
+  /// whole pipeline fail deep inside _captureAndAnalyze().
+  Future<bool> isServiceEnabled() => Geolocator.isLocationServiceEnabled();
+
   /// Requests permissions and returns the current position.
   /// Throws an exception if permissions are denied.
   Future<Position> getCurrentPosition() async {

@@ -1,16 +1,50 @@
 import 'package:flutter/material.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
 import '../widgets/pixel_button.dart';
+import '../widgets/location_prompt_dialog.dart';
 import 'capture_screen.dart';
 import 'field_journal_screen.dart';
 import 'help_screen.dart';
 import 'team_screen.dart';
 import 'tutorial_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _locationService = LocationService();
+
+  /// Checks GPS before opening the camera at all: the whole capture
+  /// pipeline depends on location (weather lookup, biome estimate,
+  /// type assignment), so it's better to catch this here than let it
+  /// fail deep inside the capture flow after the player has already
+  /// gone through camera setup.
+  Future<void> _startNewCapture() async {
+    final enabled = await _locationService.isServiceEnabled();
+    if (enabled) {
+      _openCaptureScreen();
+      return;
+    }
+
+    if (!mounted) return;
+    final enabledNow = await showLocationRequiredDialog(context);
+    if (enabledNow && mounted) {
+      _openCaptureScreen();
+    }
+  }
+
+  void _openCaptureScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CaptureScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +78,7 @@ class HomeScreen extends StatelessWidget {
                 PixelButton(
                   label: 'NEW CAPTURE',
                   icon: Icons.camera_alt,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CaptureScreen()),
-                  ),
+                  onPressed: _startNewCapture,
                 ),
                 const SizedBox(height: 18),
                 PixelButton(
