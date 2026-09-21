@@ -10,6 +10,7 @@ import '../widgets/sprite_image.dart';
 import '../providers/capture_flow_provider.dart';
 import '../services/supabase_service.dart';
 import 'result_screen.dart';
+import 'account_screen.dart';
 
 const int kMaxTeamSize = 4;
 
@@ -21,7 +22,18 @@ class TeamScreen extends ConsumerWidget {
     final wildkinAsync = ref.watch(myWildkinProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MY TEAM')),
+      appBar: AppBar(
+        title: const Text('MY TEAM'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Account',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AccountScreen()),
+            ),
+          ),
+        ],
+      ),
       body: RouteBackground(
         child: SafeArea(
           child: Padding(

@@ -19,9 +19,25 @@ class SupabaseService {
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: 'https://ffwfyhdorffzzbyvtlpv.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmd2Z5aGRvcmZmenpieXZ0bHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwOTc0MjYsImV4cCI6MjEwMzY3MzQyNn0.aK-34x9Vpe6uOJOLCE2mQkShhD9PLqsMiTWNHmGfu6Q',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmd2Z5aGRvcmZmenpieXZ0bHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwOTc0MjYsImV4cCI6MjEwMzY3MzQyNn0.aK-34x9Vpe6uOJOLCE2mQkShhD9PLqsMiTWNHmGfu6Q',
+      // PKCE is what makes the Google/deep-link flow in
+      // google_auth_service.dart work securely on mobile — required
+      // (not just recommended) for the redirect-based OAuth flow.
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
     );
   }
+
+  /// true if the current session is still an anonymous one (the
+  /// default from first launch, see main.dart) rather than linked to
+  /// a real account. Used to decide whether to show the "save your
+  /// progress" prompt (see AccountScreen).
+  bool get isAnonymous => client.auth.currentUser?.isAnonymous ?? true;
+
+  /// The email of the linked account, if any (null while anonymous).
+  String? get linkedEmail => client.auth.currentUser?.email;
 
   /// Uploads the captured photo to the 'captures' storage bucket and
   /// returns the path of the uploaded file.
@@ -29,8 +45,7 @@ class SupabaseService {
     required String userId,
     required Uint8List photoBytes,
   }) async {
-    final fileName =
-        '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
     await client.storage.from('captures').uploadBinary(
           fileName,
@@ -126,7 +141,8 @@ class SupabaseService {
 
     if (response.status == 409) {
       final data = response.data as Map<String, dynamic>?;
-      final reason = SightingRejectionReason.fromCode(data?['reason'] as String?);
+      final reason =
+          SightingRejectionReason.fromCode(data?['reason'] as String?);
       throw SightingRejectedException(reason);
     }
 

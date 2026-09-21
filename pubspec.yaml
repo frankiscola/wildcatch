@@ -18,6 +18,8 @@ dependencies:
   # Backend
   supabase_flutter: ^2.5.6
 
+
+
   # Camera / gallery
   image_picker: ^1.1.2
   camera: ^0.12.1

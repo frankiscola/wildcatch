@@ -30,6 +30,20 @@
 	<string>Wildkin uses your location to determine the weather and terrain type at the capture site.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Deep link back into the app after Google/email auth in the
+	     browser (see lib/services/google_auth_service.dart and
+	     email_auth_service.dart). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.wildkin.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.wildkin.app</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

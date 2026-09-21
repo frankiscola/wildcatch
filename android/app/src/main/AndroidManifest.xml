@@ -1,12 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Fotocamera live: unico modo per fornire una foto alla cattura
-         (vedi lib/services/camera_capture_service.dart). -->
+    <!-- Live camera: the only way to provide a photo for a capture
+         (see lib/services/camera_capture_service.dart). -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="true" />
 
-    <!-- Posizione: usata per meteo/bioma alla cattura (vedi
-         location_service.dart). La versione "fine" basta, non serve
-         il tracking in background. -->
+    <!-- Location: used for weather/biome at capture time (see
+         location_service.dart). The "fine" permission is enough, no
+         background tracking needed. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
@@ -34,6 +34,17 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Deep link back into the app after Google/email auth in
+                 the browser (see lib/services/google_auth_service.dart
+                 and email_auth_service.dart). No android:autoVerify:
+                 that flag is only meaningful for https App Links, not
+                 for a custom scheme like this one. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="io.wildkin.app" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
