@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/capture_context.dart';
 import '../models/wildkin.dart';
@@ -166,6 +167,8 @@ class SupabaseService {
         .select()
         .eq('user_id', userId)
         .order('captured_at', ascending: false);
+
+    debugPrint('getMyWildkin: fetched ${rows.length} rows for user $userId');
 
     return (rows as List)
         .map((row) => Wildkin.fromJson(row as Map<String, dynamic>))

@@ -3,6 +3,8 @@ import '../models/wildkin.dart';
 import '../models/capture_context.dart';
 import '../models/move.dart';
 import '../models/type_chart.dart';
+import '../models/wildkin_physique.dart';
+import '../models/biome_imprints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/route_background.dart';
@@ -88,6 +90,8 @@ class _ResultScreenState extends State<ResultScreen> {
                   const SizedBox(height: 8),
                   _OriginTag(speciesHint: wildkin.speciesHint!),
                 ],
+                const SizedBox(height: 4),
+                _PhysiqueTag(wildkin: wildkin),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -113,6 +117,10 @@ class _ResultScreenState extends State<ResultScreen> {
                 _MovesCard(moves: wildkin.moves.map((m) => m.move).toList()),
                 const SizedBox(height: 14),
                 _CaptureStoryCard(wildkin: wildkin),
+                if (wildkin.imprint != null) ...[
+                  const SizedBox(height: 14),
+                  _ImprintCard(imprint: wildkin.imprint!),
+                ],
                 const SizedBox(height: 20),
                 PixelButton(
                   label: widget.isNewCapture ? 'BACK TO MENU' : 'BACK',
@@ -163,6 +171,22 @@ class _OriginTag extends StatelessWidget {
       style: AppFonts.body(fontSize: 13, color: AppColors.textMuted).copyWith(
         fontStyle: FontStyle.italic,
       ),
+    );
+  }
+}
+
+/// Weight/size row, computed live from Wildkin.physique — e.g.
+/// "14.2 kg · M". Purely descriptive today.
+class _PhysiqueTag extends StatelessWidget {
+  final Wildkin wildkin;
+  const _PhysiqueTag({required this.wildkin});
+
+  @override
+  Widget build(BuildContext context) {
+    final physique = wildkin.physique;
+    return Text(
+      '${physique.weightKg.toStringAsFixed(1)} kg · ${physique.size.label}',
+      style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
     );
   }
 }
@@ -525,33 +549,64 @@ class _MovesCard extends StatelessWidget {
         children: moves
             .map((m) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: Text(m.name, style: AppFonts.body(fontSize: 16)),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(m.name, style: AppFonts.body(fontSize: 16)),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: TypeBadge(type: m.type),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              m.category == MoveCategory.status
+                                  ? 'PP ${m.maxPp}'
+                                  : 'Pow ${m.power} · Acc ${m.accuracy}% · PP ${m.maxPp}',
+                              textAlign: TextAlign.right,
+                              style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
+                            ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: TypeBadge(type: m.type),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          m.category == MoveCategory.status
-                              ? 'PP ${m.maxPp}'
-                              : 'Pow ${m.power} · Acc ${m.accuracy}% · PP ${m.maxPp}',
-                          textAlign: TextAlign.right,
-                          style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
+                      if (_mechanicLabel(m) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            _mechanicLabel(m)!,
+                            style: AppFonts.body(fontSize: 11, color: AppColors.tidalBlue),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ))
             .toList(),
       ),
     );
+  }
+
+  /// One-line callout for a move's special mechanic, if it has one —
+  /// at most one of these is ever set on a given move.
+  String? _mechanicLabel(Move m) {
+    if (m.weatherAffinity != null) {
+      return '☀ +${m.weatherBonusPct}% if the weather right now matches';
+    }
+    if (m.timeAffinity != null) {
+      return '🌙 +${m.timeBonusPct}% if it\'s really ${m.timeAffinity} right now';
+    }
+    if (m.inflictsStatus != null) {
+      return '☠ ${m.statusChancePct}% chance to inflict a status';
+    }
+    if (m.scalesWithTargetWeight) {
+      return '⚖ Hits harder against a heavier target';
+    }
+    return null;
   }
 }
 
@@ -664,6 +719,42 @@ class _CaptureStoryCard extends StatelessWidget {
 }
 
 /// Generic rounded panel, reused by stats/moves/evolution.
+/// Shows the permanent biome imprint this Wildkin rolled at capture
+/// (see BiomeImprints) — its name, flavor line, and the bonus it
+/// grants.
+class _ImprintCard extends StatelessWidget {
+  final BiomeImprint imprint;
+  const _ImprintCard({required this.imprint});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(
+      title: 'IMPRINT',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            imprint.name,
+            style: AppFonts.pixelTitle(fontSize: 11, color: AppColors.emberRed),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            imprint.description,
+            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown).copyWith(
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '+${imprint.bonusPct}% ${imprint.effect.label}',
+            style: AppFonts.body(fontSize: 13, color: AppColors.grassGreen),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Panel extends StatelessWidget {
   final String title;
   final Widget child;

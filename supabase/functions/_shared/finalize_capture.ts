@@ -19,6 +19,7 @@ import { generateBaseStats, serializeBaseStats } from "./stats_engine.ts";
 import { starterMoves } from "./movepool.ts";
 import { createInitialEvolutionPlan } from "./evolution.ts";
 import { generateSprites } from "./sprite_pipeline.ts";
+import { pickBiomeImprint } from "./biome_imprints.ts";
 
 export interface FinalizeCaptureInput {
   userId: string;
@@ -101,6 +102,9 @@ export async function finalizeCapture(
     temperature_c: context.temperature_celsius,
     humidity_percent: context.humidity_percent ?? null,
     wind_speed_kmh: context.wind_speed_kmh ?? null,
+    // Rolled once, here, server-side — same trust model as type
+    // assignment. Null for Biome "unknown" (no strong location signal).
+    biome_imprint: pickBiomeImprint(context.biome),
   };
 
   const { data: inserted, error: insertError } = await supabase

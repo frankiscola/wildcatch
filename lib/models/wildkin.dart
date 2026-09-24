@@ -2,6 +2,8 @@ import 'capture_context.dart';
 import 'evolution_plan.dart';
 import 'move.dart';
 import 'stats.dart';
+import 'biome_imprints.dart';
+import 'wildkin_physique.dart';
 
 /// Represents a captured Wildkin: its two generated sprites (front,
 /// shown in the Field Journal and menus; back, shown when the
@@ -38,6 +40,11 @@ class Wildkin {
   /// between two devices can't sneak in a 5th member.
   final bool isInTeam;
 
+  /// Rolled once at capture from its biome's pair of options (see
+  /// BiomeImprints). Permanent — never re-rolled, not even at
+  /// evolution. Null if the biome couldn't be determined at capture.
+  final BiomeImprint? imprint;
+
   const Wildkin({
     required this.id,
     required this.nickname,
@@ -55,7 +62,13 @@ class Wildkin {
     this.evolutionContext,
     this.speciesHint,
     this.isInTeam = false,
+    this.imprint,
   });
+
+  /// Weight/size, always derived fresh from stats + evolution stage
+  /// — see WildkinPhysique for why this is never stored.
+  WildkinPhysique get physique =>
+      WildkinPhysique.fromStats(baseStats, currentStage: evolutionPlan.currentStage);
 
   ComputedStats computeStats() {
     // Formulas inspired by the classic ones (simplified: no EVs,
@@ -106,6 +119,7 @@ class Wildkin {
       evolutionContext: evolutionContext ?? this.evolutionContext,
       speciesHint: speciesHint,
       isInTeam: isInTeam ?? this.isInTeam,
+      imprint: imprint,
     );
   }
 
@@ -128,6 +142,9 @@ class Wildkin {
           EvolutionPlan.fromJson(json['evolution_plan'] as Map<String, dynamic>),
       speciesHint: json['species_hint'] as String?,
       isInTeam: json['is_in_team'] as bool? ?? false,
+      imprint: json['biome_imprint'] == null
+          ? null
+          : BiomeImprint.fromJson(json['biome_imprint'] as Map<String, dynamic>),
       captureContext: CaptureContext(
         capturedAt: DateTime.parse(json['captured_at'] as String),
         latitude: (json['latitude'] as num).toDouble(),
