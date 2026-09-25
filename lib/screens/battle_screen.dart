@@ -15,10 +15,17 @@ import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
+import '../widgets/sprite_image.dart';
 import 'generating_screen.dart';
 
 /// Battle screen: the player's own Wildkin (already captured) faces
 /// a wild Wildkin generated from the sighting in progress.
+///
+/// Layout deliberately mirrors the classic GBA-era battle screen:
+/// opponent info box top-left + opponent visual upper-right, own
+/// info box (with numeric HP) + own back sprite lower-left, and a
+/// message box + a 2-level action menu (main -> moves) along the
+/// bottom, in a 2x2 grid. See _Battlefield and _ActionPanel.
 ///
 /// Two possible outcomes:
 ///  - the wild one faints: the player's Wildkin gains experience
@@ -43,6 +50,8 @@ class BattleScreen extends ConsumerStatefulWidget {
   ConsumerState<BattleScreen> createState() => _BattleScreenState();
 }
 
+enum _MenuMode { main, moves }
+
 class _BattleScreenState extends ConsumerState<BattleScreen> {
   final _engine = BattleEngine();
   final _levelingService = LevelingService();
@@ -53,6 +62,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool _busy = false;
   bool _battleOver = false;
   bool _victory = false;
+  bool _fled = false;
+  _MenuMode _menu = _MenuMode.main;
 
   @override
   void initState() {
@@ -63,7 +74,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   Future<void> _useMove(Move move) async {
     if (_busy || _battleOver) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _menu = _MenuMode.main;
+    });
 
     final result =
         _engine.attackWild(attacker: _own, target: _wild, move: move);
@@ -170,6 +184,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   /// for direct capture) — it never bypasses it.
   Future<void> _attemptCatch() async {
     if (_busy || _battleOver) return;
+    setState(() => _menu = _MenuMode.main);
 
     final probability = _engine.catchProbability(_wild);
     final success = _engine.attemptCatch(_wild);
@@ -213,6 +228,51 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     });
   }
 
+  /// Leaves the fight without a capture attempt — the wild Wildkin
+  /// stays free.
+  void _flee() {
+    if (_busy || _battleOver) return;
+    setState(() {
+      _menu = _MenuMode.main;
+      _battleOver = true;
+      _fled = true;
+      _log = "${_own.nickname} backs away. The wild Wildkin wasn't chased.";
+    });
+  }
+
+  void _showInfo() {
+    final stats = _own.computeStats();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.dialogBackground,
+        title: Text(_own.nickname, style: AppFonts.pixelTitle(fontSize: 14)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TypeBadgeRow(types: _own.types),
+            const SizedBox(height: 10),
+            Text('Lv.${_own.level} · ${_own.currentHp}/${stats.maxHp} HP',
+                style: AppFonts.body(fontSize: 14)),
+            const SizedBox(height: 6),
+            Text(
+              'Atk ${stats.attack} · Def ${stats.defense} · '
+              'Sp.Atk ${stats.elementalAttack} · Sp.Def ${stats.elementalDefense} · Spd ${stats.speed}',
+              style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,40 +280,61 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       body: RouteBackground(
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-                _WildHpBar(wild: _wild),
-                const SizedBox(height: 10),
-                _OwnHpBar(wildkin: _own),
-                const SizedBox(height: 16),
-                Expanded(child: GbaDialogBox(text: _log, fontSize: 16)),
-                const SizedBox(height: 16),
-                if (!_battleOver) ...[
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: _own.moves
-                        .map((m) => PixelButton(
-                              label: m.move.name.toUpperCase(),
-                              background: AppColors.tidalBlue,
-                              onPressed: _busy ? null : () => _useMove(m.move),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  PixelButton(
-                    label: 'ATTEMPT CAPTURE',
-                    background: AppColors.grassGreen,
-                    icon: Icons.center_focus_strong,
-                    onPressed: _busy ? null : _attemptCatch,
-                  ),
-                ] else
-                  PixelButton(
-                    label: _victory ? 'CONTINUE' : 'CLOSE',
-                    onPressed: () => Navigator.of(context)
-                        .popUntil((route) => route.isFirst),
-                  ),
+                _Battlefield(wild: _wild, own: _own),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _battleOver
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              GbaDialogBox(text: _log, fontSize: 16),
+                              const SizedBox(height: 16),
+                              PixelButton(
+                                label: _victory
+                                    ? 'CONTINUE'
+                                    : (_fled ? 'OK' : 'CLOSE'),
+                                onPressed: () => Navigator.of(context)
+                                    .popUntil((route) => route.isFirst),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 5,
+                              child: GbaDialogBox(
+                                text: _log,
+                                fontSize: 14,
+                                padding: const EdgeInsets.all(14),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 4,
+                              child: _ActionPanel(
+                                mode: _menu,
+                                busy: _busy,
+                                own: _own,
+                                onOpenMoves: () =>
+                                    setState(() => _menu = _MenuMode.moves),
+                                onBack: () =>
+                                    setState(() => _menu = _MenuMode.main),
+                                onMove: _useMove,
+                                onCatch: _attemptCatch,
+                                onRun: _flee,
+                                onInfo: _showInfo,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ],
             ),
           ),
@@ -263,94 +344,298 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 }
 
-class _WildHpBar extends StatelessWidget {
+/// The battlefield: opponent info box (top-left) + opponent visual
+/// (upper-right), own info box with numeric HP (lower-right) + own
+/// back sprite (lower-left) — same diagonal composition as the
+/// classic GBA battle screen.
+class _Battlefield extends StatelessWidget {
   final WildEncounter wild;
-  const _WildHpBar({required this.wild});
+  final Wildkin own;
+  const _Battlefield({required this.wild, required this.own});
 
   @override
   Widget build(BuildContext context) {
-    return _HpRow(
-      title: 'Wild · Lv.${wild.level}',
-      types: wild.types,
-      current: wild.currentHp,
-      max: wild.maxHp,
+    final ownStats = own.computeStats();
+    return SizedBox(
+      height: 270,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 60,
+            right: 4,
+            child: _OpponentVisual(photoUrl: wild.photoUrl, types: wild.types),
+          ),
+          Positioned(
+            bottom: 46,
+            left: 0,
+            child: SizedBox(
+              width: 140,
+              height: 140,
+              child: SpriteImage(url: own.backSpriteUrl),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 110,
+            child: _InfoBox(
+              title: 'Wild · Lv.${wild.level}',
+              types: wild.types,
+              fraction: wild.maxHp == 0 ? 0 : wild.currentHp / wild.maxHp,
+              hpLabel: null, // classic games hide the opponent's exact HP
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            left: 90,
+            child: _InfoBox(
+              title: '${own.nickname} · Lv.${own.level}',
+              types: own.types,
+              fraction: ownStats.maxHp == 0 ? 0 : own.currentHp / ownStats.maxHp,
+              hpLabel: '${own.currentHp}/${ownStats.maxHp}',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _OwnHpBar extends StatelessWidget {
-  final Wildkin wildkin;
-  const _OwnHpBar({required this.wildkin});
+/// The wild opponent's visual during battle is the actual photo
+/// taken of it (not a generated sprite — those only exist once it's
+/// actually caught). Falls back to a type-colored placeholder when
+/// there's no photo yet (e.g. this debug preview harness).
+class _OpponentVisual extends StatelessWidget {
+  final String photoUrl;
+  final List<String> types;
+  const _OpponentVisual({required this.photoUrl, required this.types});
 
   @override
   Widget build(BuildContext context) {
-    return _HpRow(
-      title: '${wildkin.nickname} · Lv.${wildkin.level}',
-      types: wildkin.types,
-      current: wildkin.currentHp,
-      max: wildkin.computeStats().maxHp,
+    const size = 120.0;
+    if (photoUrl.isEmpty) {
+      final color = types.isEmpty ? AppColors.textMuted : TypeColors.of(types.first);
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        child: const Icon(Icons.help_outline, color: Colors.white, size: 48),
+      );
+    }
+    return ClipOval(
+      child: SizedBox(width: size, height: size, child: SpriteImage(url: photoUrl)),
     );
   }
 }
 
-class _HpRow extends StatelessWidget {
+/// Compact name/level + HP bar box (no numeric HP unless [hpLabel]
+/// is given — the classic screen never shows the opponent's exact
+/// number, only yours).
+class _InfoBox extends StatelessWidget {
   final String title;
   final List<String> types;
-  final int current;
-  final int max;
+  final double fraction;
+  final String? hpLabel;
 
-  const _HpRow({
+  const _InfoBox({
     required this.title,
     required this.types,
-    required this.current,
-    required this.max,
+    required this.fraction,
+    required this.hpLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    final fraction = max == 0 ? 0.0 : (current / max).clamp(0.0, 1.0);
-    final barColor = fraction > 0.5
+    final f = fraction.clamp(0.0, 1.0);
+    final barColor = f > 0.5
         ? AppColors.grassGreen
-        : (fraction > 0.2 ? const Color(0xFFE0A62B) : AppColors.emberRed);
+        : (f > 0.2 ? const Color(0xFFE0A62B) : AppColors.emberRed);
 
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.dialogBackground,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(color: AppColors.shadowSoft, blurRadius: 6, offset: Offset(0, 3)),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppFonts.pixelTitle(fontSize: 8),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TypeBadgeRow(types: types),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              children: [
+                Container(height: 8, color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
+                FractionallySizedBox(
+                  widthFactor: f,
+                  child: Container(height: 8, color: barColor),
+                ),
+              ],
+            ),
+          ),
+          if (hpLabel != null) ...[
+            const SizedBox(height: 3),
+            Text(hpLabel!, style: AppFonts.body(fontSize: 11)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The bottom-right 2x2 menu. Main mode: FIGHT / CATCH / RUN / INFO.
+/// Moves mode (after FIGHT): the 4 actual moves, with a back arrow.
+class _ActionPanel extends StatelessWidget {
+  final _MenuMode mode;
+  final bool busy;
+  final Wildkin own;
+  final VoidCallback onOpenMoves;
+  final VoidCallback onBack;
+  final void Function(Move) onMove;
+  final VoidCallback onCatch;
+  final VoidCallback onRun;
+  final VoidCallback onInfo;
+
+  const _ActionPanel({
+    required this.mode,
+    required this.busy,
+    required this.own,
+    required this.onOpenMoves,
+    required this.onBack,
+    required this.onMove,
+    required this.onCatch,
+    required this.onRun,
+    required this.onInfo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.dialogBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-              color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: AppFonts.pixelTitle(fontSize: 10)),
-              TypeBadgeRow(types: types),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Stack(
+      padding: const EdgeInsets.all(8),
+      child: mode == _MenuMode.main
+          ? _grid([
+              _Slot('FIGHT', AppColors.tidalBlue, busy ? null : onOpenMoves),
+              _Slot('CATCH', AppColors.grassGreen, busy ? null : onCatch),
+              _Slot('RUN', AppColors.emberRed, busy ? null : onRun),
+              _Slot('INFO', AppColors.panelBrown, busy ? null : onInfo),
+            ])
+          : Column(
               children: [
-                Container(
-                    height: 12,
-                    color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
-                FractionallySizedBox(
-                  widthFactor: fraction,
-                  child: Container(height: 12, color: barColor),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: busy ? null : onBack,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                  ),
+                ),
+                Expanded(
+                  child: _grid(
+                    own.moves
+                        .map((m) => _Slot(
+                              '${m.move.name}\n(${m.currentPp}/${m.move.maxPp})',
+                              TypeColors.of(m.move.type),
+                              busy ? null : () => onMove(m.move),
+                            ))
+                        .toList(),
+                  ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _grid(List<_Slot> slots) {
+    while (slots.length < 4) {
+      slots.add(_Slot('—', AppColors.textMuted, null));
+    }
+    return Column(
+      children: [
+        Expanded(child: Row(children: [_cell(slots[0]), _cell(slots[1])])),
+        const SizedBox(height: 6),
+        Expanded(child: Row(children: [_cell(slots[2]), _cell(slots[3])])),
+      ],
+    );
+  }
+
+  Widget _cell(_Slot slot) => Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: _MenuSlotButton(slot: slot),
+        ),
+      );
+}
+
+class _Slot {
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  const _Slot(this.label, this.color, this.onTap);
+}
+
+/// A single grid cell in the 2x2 action menu — same gradient/shadow
+/// language as PixelButton, but sized to fill its cell instead of
+/// hugging its content.
+class _MenuSlotButton extends StatelessWidget {
+  final _Slot slot;
+  const _MenuSlotButton({required this.slot});
+
+  Color _darken(Color color, [double amount = 0.18]) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = slot.onTap == null;
+    final bg = disabled ? AppColors.textMuted : slot.color;
+
+    return GestureDetector(
+      onTap: slot.onTap,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [bg, _darken(bg)],
           ),
-          const SizedBox(height: 4),
-          Text('$current / $max HP', style: AppFonts.body(fontSize: 13)),
-        ],
+        ),
+        child: Text(
+          slot.label.toUpperCase(),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppFonts.pixelTitle(fontSize: 8, color: AppColors.textOnDark),
+        ),
       ),
     );
   }
