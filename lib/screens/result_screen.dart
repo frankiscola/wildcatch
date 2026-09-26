@@ -60,6 +60,33 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
 
+  /// Adding to the team happens immediately; removing always asks
+  /// for confirmation first, since it's the one accidental tap that
+  /// actually costs the player something (a battle-ready teammate).
+  Future<void> _handleTeamButtonPressed() async {
+    if (_wildkin.isInTeam) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove from team?'),
+          content: Text('${_wildkin.nickname} will be benched. You can add it back anytime.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('CANCEL'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('REMOVE', style: TextStyle(color: AppColors.emberRed)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await _toggleTeam();
+  }
+
   @override
   Widget build(BuildContext context) {
     final wildkin = _wildkin;
@@ -76,23 +103,21 @@ class _ResultScreenState extends State<ResultScreen> {
                 GbaDialogBox(
                   text: widget.isNewCapture
                       ? 'Congratulations! You caught a new Wildkin!'
-                      : _flavorLine(wildkin),
+                      : _descriptionLine(wildkin),
                   fontSize: 15,
                 ),
                 const SizedBox(height: 16),
-                _SpriteStage(wildkin: wildkin, showFront: _showFront),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => setState(() => _showFront = !_showFront),
-                  child: _FlipHint(showFront: _showFront),
+                _SpriteStage(
+                  wildkin: wildkin,
+                  showFront: _showFront,
+                  onFlip: () => setState(() => _showFront = !_showFront),
                 ),
-                if (wildkin.speciesHint != null) ...[
-                  const SizedBox(height: 8),
-                  _OriginTag(speciesHint: wildkin.speciesHint!),
-                ],
-                const SizedBox(height: 4),
-                _PhysiqueTag(wildkin: wildkin),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                Text(
+                  _showFront ? 'Front view' : 'Back view',
+                  style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -101,14 +126,10 @@ class _ResultScreenState extends State<ResultScreen> {
                     TypeBadgeRow(types: wildkin.types),
                   ],
                 ),
-                const SizedBox(height: 10),
-                PixelButton(
-                  label: wildkin.isInTeam ? 'REMOVE FROM TEAM' : 'ADD TO TEAM',
-                  background: wildkin.isInTeam ? AppColors.emberRed : AppColors.grassGreen,
-                  onPressed: _updatingTeam ? null : _toggleTeam,
-                ),
                 const SizedBox(height: 14),
                 _EvolutionCard(wildkin: wildkin),
+                const SizedBox(height: 14),
+                _PhysiqueCard(wildkin: wildkin),
                 const SizedBox(height: 14),
                 _TypeMatchupsCard(types: wildkin.types),
                 const SizedBox(height: 14),
@@ -136,12 +157,34 @@ class _ResultScreenState extends State<ResultScreen> {
                     }
                   },
                 ),
+                const SizedBox(height: 14),
+                PixelButton(
+                  label: wildkin.isInTeam ? 'REMOVE FROM TEAM' : 'ADD TO TEAM',
+                  background: wildkin.isInTeam ? AppColors.emberRed : AppColors.grassGreen,
+                  onPressed: _updatingTeam ? null : _handleTeamButtonPressed,
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Combines the random flavor line with a short, narrative nod to
+  /// the real animal this Wildkin came from (when known) — e.g.
+  /// "Loyal and always watching. Beetle walking." — instead of a
+  /// separate, dry "Derived from a beetle" label.
+  String _descriptionLine(Wildkin wildkin) {
+    final flavor = _flavorLine(wildkin);
+    final species = wildkin.speciesHint;
+    if (species == null || species.isEmpty) return flavor;
+    return '$flavor ${_speciesPhrase(species)}';
+  }
+
+  String _speciesPhrase(String speciesHint) {
+    final capitalized = speciesHint[0].toUpperCase() + speciesHint.substring(1);
+    return '$capitalized walking.';
   }
 
   /// A short, varied line for the banner when this Wildkin is being
@@ -158,44 +201,16 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 }
 
-/// Small pill under the sprite naming the real-world animal this
-/// Wildkin was derived from (e.g. "Derived from a cat"), when known.
-class _OriginTag extends StatelessWidget {
-  final String speciesHint;
-  const _OriginTag({required this.speciesHint});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      'Derived from a $speciesHint',
-      style: AppFonts.body(fontSize: 13, color: AppColors.textMuted).copyWith(
-        fontStyle: FontStyle.italic,
-      ),
-    );
-  }
-}
-
-/// Weight/size row, computed live from Wildkin.physique — e.g.
-/// "14.2 kg · M". Purely descriptive today.
-class _PhysiqueTag extends StatelessWidget {
-  final Wildkin wildkin;
-  const _PhysiqueTag({required this.wildkin});
-
-  @override
-  Widget build(BuildContext context) {
-    final physique = wildkin.physique;
-    return Text(
-      '${physique.weightKg.toStringAsFixed(1)} kg · ${physique.size.label}',
-      style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
-    );
-  }
-}
-
 class _SpriteStage extends StatelessWidget {
   final Wildkin wildkin;
   final bool showFront;
+  final VoidCallback onFlip;
 
-  const _SpriteStage({required this.wildkin, required this.showFront});
+  const _SpriteStage({
+    required this.wildkin,
+    required this.showFront,
+    required this.onFlip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -205,46 +220,53 @@ class _SpriteStage extends StatelessWidget {
       width: double.infinity,
       height: 220,
       decoration: BoxDecoration(
-        color: AppColors.panelCream,
+        gradient: TypeColors.backgroundGradient(wildkin.types),
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(color: AppColors.shadowSoft, blurRadius: 12, offset: Offset(0, 6)),
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: SpriteImage(url: spriteUrl, key: ValueKey(spriteUrl)),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: SpriteImage(url: spriteUrl, key: ValueKey(spriteUrl)),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 10,
+            right: 10,
+            child: _FlipButton(onTap: onFlip),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _FlipHint extends StatelessWidget {
-  final bool showFront;
-  const _FlipHint({required this.showFront});
+/// The flip button now lives INSIDE the sprite rectangle (top-right),
+/// instead of as a separate pill underneath it.
+class _FlipButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _FlipButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.panelCream,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 6, offset: Offset(0, 3)),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.flip, size: 16, color: AppColors.panelBrown),
-          const SizedBox(width: 8),
-          Text(
-            showFront ? 'BATTLE VIEW (BACK)' : 'JOURNAL VIEW (FRONT)',
-            style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.panelBrown),
-          ),
-        ],
+    return Material(
+      color: Colors.white.withValues(alpha: 0.85),
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(9),
+          child: Icon(Icons.flip, size: 18, color: AppColors.panelBrown),
+        ),
       ),
     );
   }
@@ -273,9 +295,60 @@ class _LevelBadge extends StatelessWidget {
   }
 }
 
+/// Weight and size, now a proper card of their own instead of a tiny
+/// caption squeezed under the sprite.
+class _PhysiqueCard extends StatelessWidget {
+  final Wildkin wildkin;
+  const _PhysiqueCard({required this.wildkin});
+
+  @override
+  Widget build(BuildContext context) {
+    final physique = wildkin.physique;
+    return _Panel(
+      title: 'PHYSIQUE',
+      child: Row(
+        children: [
+          Expanded(
+            child: _PhysiqueStat(
+              label: 'WEIGHT',
+              value: '${physique.weightKg.toStringAsFixed(1)} kg',
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 34,
+            color: AppColors.dialogBorderOuter.withValues(alpha: 0.15),
+          ),
+          Expanded(
+            child: _PhysiqueStat(label: 'SIZE', value: physique.size.label),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhysiqueStat extends StatelessWidget {
+  final String label;
+  final String value;
+  const _PhysiqueStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
+        const SizedBox(height: 6),
+        Text(value, style: AppFonts.body(fontSize: 17, color: AppColors.panelBrown)),
+      ],
+    );
+  }
+}
+
 /// Shows the number of stages in the evolutionary line and the
 /// qualitative hint about the next evolution, without ever revealing
-/// the exact level.
+/// the exact level. Now a visual stage tracker (nodes + connecting
+/// bars) instead of plain "Current stage: X/Y" text.
 class _EvolutionCard extends StatelessWidget {
   final Wildkin wildkin;
   const _EvolutionCard({required this.wildkin});
@@ -283,28 +356,101 @@ class _EvolutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final plan = wildkin.evolutionPlan;
-    final lineLabel = plan.totalStages == 3
-        ? '3-stage evolutionary line (2 possible evolutions)'
-        : '2-stage evolutionary line (1 possible evolution)';
 
     return _Panel(
       title: 'EVOLUTION',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(lineLabel, style: AppFonts.body(fontSize: 16)),
-          const SizedBox(height: 4),
           Text(
-            'Current stage: ${plan.currentStage}/${plan.totalStages}',
-            style: AppFonts.body(fontSize: 16),
+            plan.totalStages == 3 ? 'Up to 2 evolutions possible' : 'Up to 1 evolution possible',
+            style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
           ),
-          const SizedBox(height: 4),
-          Text(
-            plan.timingLabel(),
-            style: AppFonts.body(fontSize: 16, color: AppColors.emberRed),
+          const SizedBox(height: 16),
+          _EvolutionTrack(currentStage: plan.currentStage, totalStages: plan.totalStages),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppColors.emberRed.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              plan.timingLabel(),
+              style: AppFonts.body(fontSize: 13, color: AppColors.emberRed).copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Row of stage "nodes" connected by bars — filled/green up to the
+/// current stage, hollow with a "?" beyond it (an evolution not yet
+/// reached should look genuinely unknown, not just grayed out text).
+class _EvolutionTrack extends StatelessWidget {
+  final int currentStage;
+  final int totalStages;
+  const _EvolutionTrack({required this.currentStage, required this.totalStages});
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+    for (var stage = 1; stage <= totalStages; stage++) {
+      if (stage > 1) {
+        final barReached = stage <= currentStage;
+        children.add(
+          Expanded(
+            child: Container(
+              height: 3,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: barReached
+                  ? AppColors.grassGreen
+                  : AppColors.dialogBorderOuter.withValues(alpha: 0.15),
+            ),
+          ),
+        );
+      }
+      children.add(_StageNode(stage: stage, reached: stage <= currentStage));
+    }
+    return Row(children: children);
+  }
+}
+
+class _StageNode extends StatelessWidget {
+  final int stage;
+  final bool reached;
+  const _StageNode({required this.stage, required this.reached});
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = reached ? AppColors.grassGreen : AppColors.dialogBorderOuter.withValues(alpha: 0.25);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: reached ? AppColors.grassGreen : Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(color: outline, width: 2),
+          ),
+          child: Center(
+            child: reached
+                ? Text(
+                    '$stage',
+                    style: AppFonts.pixelTitle(fontSize: 12, color: Colors.white),
+                  )
+                : Icon(Icons.question_mark, size: 14, color: AppColors.textMuted.withValues(alpha: 0.6)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('STAGE $stage', style: AppFonts.body(fontSize: 9, color: AppColors.textMuted)),
+      ],
     );
   }
 }
@@ -548,36 +694,34 @@ class _MovesCard extends StatelessWidget {
       child: Column(
         children: moves
             .map((m) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Expanded(
-                            flex: 3,
                             child: Text(m.name, style: AppFonts.body(fontSize: 16)),
                           ),
-                          Expanded(
-                            flex: 2,
-                            child: TypeBadge(type: m.type),
-                          ),
                           const SizedBox(width: 8),
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              m.category == MoveCategory.status
-                                  ? 'PP ${m.maxPp}'
-                                  : 'Pow ${m.power} · Acc ${m.accuracy}% · PP ${m.maxPp}',
-                              textAlign: TextAlign.right,
-                              style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
-                            ),
-                          ),
+                          TypeBadge(type: m.type),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: m.category == MoveCategory.status
+                            ? [_MoveStatChip(label: 'PP', value: '${m.maxPp}')]
+                            : [
+                                _MoveStatChip(label: 'POW', value: '${m.power}'),
+                                const SizedBox(width: 8),
+                                _MoveStatChip(label: 'ACC', value: '${m.accuracy}%'),
+                                const SizedBox(width: 8),
+                                _MoveStatChip(label: 'PP', value: '${m.maxPp}'),
+                              ],
                       ),
                       if (_mechanicLabel(m) != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             _mechanicLabel(m)!,
                             style: AppFonts.body(fontSize: 11, color: AppColors.tidalBlue),
@@ -607,6 +751,39 @@ class _MovesCard extends StatelessWidget {
       return '⚖ Hits harder against a heavier target';
     }
     return null;
+  }
+}
+
+/// Small labeled stat chip (POW/ACC/PP), used inside the moves list
+/// so the three numbers read as distinct values instead of one
+/// run-together string.
+class _MoveStatChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MoveStatChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.dialogBorderOuter.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AppFonts.pixelTitle(fontSize: 7, color: AppColors.textMuted)),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown).copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -650,8 +827,22 @@ class _CaptureStoryCard extends StatelessWidget {
     final timeOfDay = ctx.isNightTime ? 'at night' : 'during the day';
     final weather = _weatherPhrase(ctx.weatherCondition);
     final place = _biomePhrase(ctx.biome);
-    return '$verb $timeOfDay, $weather, $place, in ${ctx.season}. '
-        '(${ctx.temperatureCelsius.round()}°C)';
+    final temperature = _temperatureLabel(ctx.temperatureCelsius).toLowerCase();
+    return '$verb $timeOfDay, $weather, $place, in ${ctx.season}. It was $temperature.';
+  }
+
+  /// A descriptive word instead of a raw number — "18°C" doesn't mean
+  /// much at a glance, "Chill" does.
+  String _temperatureLabel(double celsius) {
+    if (celsius <= -5) return 'Freezing';
+    if (celsius <= 5) return 'Very cold';
+    if (celsius <= 12) return 'Cold';
+    if (celsius <= 18) return 'Chill';
+    if (celsius <= 24) return 'Mild';
+    if (celsius <= 29) return 'Warm';
+    if (celsius <= 34) return 'Hot';
+    if (celsius <= 39) return 'Very hot';
+    return 'Melting';
   }
 
   String _weatherPhrase(String weatherCondition) {
@@ -692,7 +883,7 @@ class _CaptureStoryCard extends StatelessWidget {
 
   Widget _chips(CaptureContext ctx) {
     final chips = <String>[
-      '${ctx.temperatureCelsius.round()}°C',
+      _temperatureLabel(ctx.temperatureCelsius),
       ctx.weatherCondition,
       ctx.season,
       ctx.isNightTime ? 'night' : 'day',

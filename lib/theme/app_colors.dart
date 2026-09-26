@@ -77,4 +77,25 @@ class TypeColors {
 
   static Color of(String type) =>
       byName[type.toLowerCase()] ?? AppColors.textMuted;
+
+  /// Soft themed background for the sprite stage — a light wash of
+  /// the Wildkin's own type color(s) instead of a neutral panel, so
+  /// e.g. an Ice Wildkin sits on a pale icy blue and an Electric one
+  /// sits on a stormier, more saturated tone. Blends both colors
+  /// diagonally when there are two types.
+  static Gradient backgroundGradient(List<String> types) {
+    if (types.isEmpty) {
+      return const LinearGradient(colors: [AppColors.panelCream, AppColors.panelCream]);
+    }
+    final first = of(types.first);
+    final second = types.length > 1 ? of(types[1]) : first;
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(first, Colors.white, 0.72)!,
+        Color.lerp(second, Colors.white, 0.32)!,
+      ],
+    );
+  }
 }
