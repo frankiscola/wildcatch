@@ -10,6 +10,15 @@ class BattleLogEntry {
   final String outcome; // 'won' | 'catch_failed' | 'fled' | 'lost'
   final DateTime createdAt;
 
+  /// Real-world animal this wild encounter looked like, if the
+  /// snapshot happens to carry one. NOTE: as of today,
+  /// WildEncounterGenerator doesn't attach a species hint to wild
+  /// encounters, so this will normally be null for "seen" entries —
+  /// kept nullable and read defensively so the Journal's species
+  /// filter already works the day that's added, without another
+  /// migration of this model.
+  final String? speciesHint;
+
   const BattleLogEntry({
     required this.id,
     required this.photoUrl,
@@ -17,6 +26,7 @@ class BattleLogEntry {
     required this.level,
     required this.outcome,
     required this.createdAt,
+    this.speciesHint,
   });
 
   factory BattleLogEntry.fromJson(Map<String, dynamic> json) {
@@ -28,6 +38,7 @@ class BattleLogEntry {
       level: snapshot['level'] as int,
       outcome: json['outcome'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      speciesHint: snapshot['species_hint'] as String?,
     );
   }
 }

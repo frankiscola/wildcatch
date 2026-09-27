@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/type_chart.dart';
 import '../models/wildkin.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -10,54 +11,226 @@ import '../widgets/sprite_image.dart';
 import '../providers/capture_flow_provider.dart';
 import 'result_screen.dart';
 
+enum _SortMode { name, level }
+
 /// Every Wildkin the player currently owns (team + bench together) —
 /// distinct from the Field Journal, which also includes wild
 /// encounters that were fought but never caught.
-class CollectionScreen extends ConsumerWidget {
+class CollectionScreen extends ConsumerStatefulWidget {
   const CollectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CollectionScreen> createState() => _CollectionScreenState();
+}
+
+class _CollectionScreenState extends ConsumerState<CollectionScreen> {
+  String? _typeFilter; // null = all types
+  _SortMode _sortMode = _SortMode.name;
+
+  List<Wildkin> _applyFilterAndSort(List<Wildkin> source) {
+    final filtered = _typeFilter == null
+        ? source
+        : source.where((w) => w.types.contains(_typeFilter)).toList();
+
+    final sorted = [...filtered];
+    switch (_sortMode) {
+      case _SortMode.name:
+        sorted.sort((a, b) => a.nickname.toLowerCase().compareTo(b.nickname.toLowerCase()));
+      case _SortMode.level:
+        sorted.sort((a, b) => b.level.compareTo(a.level)); // highest level first
+    }
+    return sorted;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final wildkinAsync = ref.watch(myWildkinProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('COLLECTION')),
       body: RouteBackground(
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: wildkinAsync.when(
-              data: (wildkinList) {
-                if (wildkinList.isEmpty) {
-                  return const Center(
+          child: wildkinAsync.when(
+            data: (wildkinList) {
+              if (wildkinList.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
                     child: GbaDialogBox(
                       text: 'You haven\'t caught any Wildkin yet. '
                           'Tap the camera button below to take your first photo!',
                       fontSize: 16,
                     ),
-                  );
-                }
-                return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.85,
                   ),
-                  itemCount: wildkinList.length,
-                  itemBuilder: (context, index) =>
-                      _WildkinCard(wildkin: wildkinList[index]),
                 );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: GbaDialogBox(
-                  text: 'Could not load the Collection: $error',
-                  fontSize: 15,
-                ),
+              }
+
+              final shown = _applyFilterAndSort(wildkinList);
+
+              return Column(
+                children: [
+                  _FilterAndSortBar(
+                    selectedType: _typeFilter,
+                    onTypeSelected: (t) => setState(() => _typeFilter = t),
+                    sortMode: _sortMode,
+                    onSortChanged: (m) => setState(() => _sortMode = m),
+                  ),
+                  Expanded(
+                    child: shown.isEmpty
+                        ? Center(
+                            child: GbaDialogBox(
+                              text: 'No Wildkin match this filter.',
+                              fontSize: 15,
+                            ),
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: 0.85,
+                            ),
+                            itemCount: shown.length,
+                            itemBuilder: (context, index) => _WildkinCard(wildkin: shown[index]),
+                          ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: GbaDialogBox(
+                text: 'Could not load the Collection: $error',
+                fontSize: 15,
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Type filter chips (scrollable, "All" + one per type) plus a
+/// name/level sort toggle, shared visual language with the type
+/// badges used everywhere else in the app.
+class _FilterAndSortBar extends StatelessWidget {
+  final String? selectedType;
+  final ValueChanged<String?> onTypeSelected;
+  final _SortMode sortMode;
+  final ValueChanged<_SortMode> onSortChanged;
+
+  const _FilterAndSortBar({
+    required this.selectedType,
+    required this.onTypeSelected,
+    required this.sortMode,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 34,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _FilterChip(label: 'ALL', selected: selectedType == null, onTap: () => onTypeSelected(null)),
+                const SizedBox(width: 8),
+                for (final type in TypeChart.orderedTypes) ...[
+                  _FilterChip(
+                    label: type.toUpperCase(),
+                    color: TypeColors.of(type),
+                    selected: selectedType == type,
+                    onTap: () => onTypeSelected(type),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text('SORT', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
+              const SizedBox(width: 10),
+              _SortToggle(
+                label: 'A–Z',
+                selected: sortMode == _SortMode.name,
+                onTap: () => onSortChanged(_SortMode.name),
+              ),
+              const SizedBox(width: 8),
+              _SortToggle(
+                label: 'LEVEL',
+                selected: sortMode == _SortMode.level,
+                onTap: () => onSortChanged(_SortMode.level),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final Color? color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final base = color ?? AppColors.panelBrown;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? base : base.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppFonts.pixelTitle(fontSize: 8, color: selected ? Colors.white : base),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortToggle extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SortToggle({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.tidalBlue : AppColors.tidalBlue.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: AppFonts.pixelTitle(fontSize: 8, color: selected ? Colors.white : AppColors.tidalBlue),
         ),
       ),
     );
