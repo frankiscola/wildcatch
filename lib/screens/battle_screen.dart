@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -162,6 +164,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           _battleOver = true;
           _log += ' You have no more Wildkin able to fight!';
           _persistTeamChanges();
+          unawaited(SupabaseService().logBattleEncounter(
+            ownWildkinId: afterHit.id,
+            wild: _wild,
+            outcome: 'lost',
+          ));
         }
       }
     });
@@ -234,6 +241,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         _victory = true;
         _busy = false;
       });
+      unawaited(SupabaseService().logBattleEncounter(
+        ownWildkinId: persisted.id,
+        wild: _wild,
+        outcome: 'won',
+      ));
       await _persistTeamChanges(alreadyPersisted: persisted);
     } catch (e) {
       setState(() {
@@ -242,6 +254,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         _victory = true;
         _busy = false;
       });
+      unawaited(SupabaseService().logBattleEncounter(
+        ownWildkinId: _activeId,
+        wild: _wild,
+        outcome: 'won',
+      ));
     }
   }
 
@@ -279,6 +296,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         _log =
             'The Wildkin got away! (odds were ${(probability * 100).round()}%)';
       });
+      unawaited(SupabaseService().logBattleEncounter(
+        ownWildkinId: _activeId,
+        wild: _wild,
+        outcome: 'catch_failed',
+      ));
       await _persistTeamChanges();
       return;
     }
@@ -307,6 +329,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           "Couldn't confirm the capture. The Wildkin remains free, but "
               'you can go looking for it again.';
     });
+    unawaited(SupabaseService().logBattleEncounter(
+      ownWildkinId: _activeId,
+      wild: _wild,
+      outcome: 'catch_failed',
+    ));
     await _persistTeamChanges();
   }
 
@@ -319,6 +346,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       _fled = true;
       _log = "${_own.nickname} backs away. The wild Wildkin wasn't chased.";
     });
+    unawaited(SupabaseService().logBattleEncounter(
+      ownWildkinId: _activeId,
+      wild: _wild,
+      outcome: 'fled',
+    ));
     await _persistTeamChanges();
   }
 

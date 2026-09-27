@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../models/capture_context.dart';
 import '../models/wildkin.dart';
 import '../models/sighting.dart';
+import '../models/battle_log_entry.dart';
 import '../services/camera_capture_service.dart';
 import '../services/depth_check_service.dart';
 import '../services/liveness_service.dart';
@@ -316,7 +317,16 @@ final captureFlowProvider = StateNotifierProvider<CaptureFlowNotifier, CaptureFl
   (ref) => CaptureFlowNotifier(),
 );
 
-/// List of the Wildkin the player has caught, for the Field Journal.
+/// List of the Wildkin the player currently owns, for the Collection
+/// screen.
 final myWildkinProvider = FutureProvider<List<Wildkin>>((ref) async {
   return SupabaseService().getMyWildkin();
+});
+
+/// Every wild encounter fought but not caught (won, catch failed,
+/// fled, or lost), for the Field Journal — shown alongside owned
+/// Wildkin so the journal reflects everything ever encountered, not
+/// just what's in the Collection.
+final battleLogsProvider = FutureProvider<List<BattleLogEntry>>((ref) async {
+  return SupabaseService().getBattleLogs();
 });

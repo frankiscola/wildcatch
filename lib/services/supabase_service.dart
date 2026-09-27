@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/capture_context.dart';
 import '../models/wildkin.dart';
+import '../models/wild_encounter.dart';
 import '../models/sighting.dart';
+import '../models/battle_log_entry.dart';
 
 /// Single point of access to Supabase: initialization, uploading the
 /// original photo, and invoking the edge function that generates the
@@ -254,6 +256,50 @@ class SupabaseService {
       }
       rethrow;
     }
+  }
+
+  /// Logs the outcome of a wild encounter that did NOT end in a new
+  /// capture (won-but-not-caught, catch failed, fled, or lost) — so
+  /// the Field Journal can show every Wildkin ever encountered, not
+  /// just the ones currently owned. Fire-and-forget by design: a
+  /// logging failure should never interrupt or fail the battle
+  /// itself, so callers should not await this on the critical path.
+  Future<void> logBattleEncounter({
+    required String ownWildkinId,
+    required WildEncounter wild,
+    required String outcome,
+  }) async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await client.from('battle_logs').insert({
+      'user_id': userId,
+      'creature_id': ownWildkinId,
+      'wild_snapshot': {
+        'photo_url': wild.photoUrl,
+        'types': wild.types,
+        'level': wild.level,
+      },
+      'outcome': outcome,
+    });
+  }
+
+  /// All logged wild encounters for the current user, newest first —
+  /// used by the Field Journal to show Wildkin that were fought but
+  /// never caught, alongside the owned ones from [getMyWildkin].
+  Future<List<BattleLogEntry>> getBattleLogs() async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final rows = await client
+        .from('battle_logs')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return (rows as List)
+        .map((row) => BattleLogEntry.fromJson(row as Map<String, dynamic>))
+        .toList();
   }
 }
 

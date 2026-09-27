@@ -6,7 +6,7 @@ import '../theme/type_badge_assets.dart';
 import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 
 /// A single step in an arrow diagram (an icon in a colored circle +
 /// an optional caption below). If [imageAsset] is set, that image is
@@ -189,7 +189,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
 
     if (widget.isFirstLaunch) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else {
       Navigator.of(context).pop();

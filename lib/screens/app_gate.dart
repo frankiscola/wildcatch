@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 import 'tutorial_screen.dart';
 
 /// First widget shown at startup: checks whether the tutorial has
@@ -40,6 +40,6 @@ class _AppGateState extends State<AppGate> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return showTutorial ? const TutorialScreen(isFirstLaunch: true) : const HomeScreen();
+    return showTutorial ? const TutorialScreen(isFirstLaunch: true) : const MainShell();
   }
 }
