@@ -268,8 +268,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   Future<void> _persistTeamChanges({Wildkin? alreadyPersisted}) async {
     if (_team == null) return;
     for (final member in _team!) {
-      if (alreadyPersisted != null && member.id == alreadyPersisted.id)
+      if (alreadyPersisted != null && member.id == alreadyPersisted.id) {
         continue;
+      }
       if (_startingHp[member.id] == member.currentHp) continue;
       try {
         await SupabaseService().updateAfterBattle(member);
