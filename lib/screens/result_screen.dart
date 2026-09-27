@@ -13,7 +13,7 @@ import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
 import '../services/supabase_service.dart';
-import 'main_shell.dart';
+import 'home_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final Wildkin wildkin;
@@ -149,7 +149,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   onPressed: () {
                     if (widget.isNewCapture) {
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const MainShell()),
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
                         (route) => false,
                       );
                     } else {
