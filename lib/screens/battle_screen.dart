@@ -1,11 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/wildkin.dart';
 import '../models/move.dart';
 import '../models/wild_encounter.dart';
+import '../models/type_chart.dart';
+import '../models/wildkin_physique.dart';
 import '../providers/capture_flow_provider.dart';
 import '../services/battle_engine.dart';
 import '../services/context_builder.dart';
@@ -98,8 +98,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (_busy || _battleOver || _mustSwitch) return;
     setState(() => _busy = true);
 
-    final result =
-        _engine.attackWild(attacker: _own, target: _wild, move: move);
+    final result = _engine.attackWild(attacker: _own, target: _wild, move: move);
 
     setState(() {
       if (!result.hit) {
@@ -132,8 +131,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       return;
     }
     final wildMove = _wild.moves[(_wild.moves.length > 1) ? 1 : 0];
-    final counter =
-        _engine.attackOwn(attacker: _wild, target: _own, move: wildMove);
+    final counter = _engine.attackOwn(attacker: _wild, target: _own, move: wildMove);
 
     final current = _own;
     Wildkin afterHit = current;
@@ -154,8 +152,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       _log += logAddition;
       _busy = false;
       if (afterHit.currentHp <= 0) {
-        final anyoneLeft =
-            _team!.any((w) => w.id != afterHit.id && w.currentHp > 0);
+        final anyoneLeft = _team!.any((w) => w.id != afterHit.id && w.currentHp > 0);
         _log += '\n${afterHit.nickname} can no longer battle!';
         if (anyoneLeft) {
           _mustSwitch = true;
@@ -164,11 +161,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           _battleOver = true;
           _log += ' You have no more Wildkin able to fight!';
           _persistTeamChanges();
-          unawaited(SupabaseService().logBattleEncounter(
-            ownWildkinId: afterHit.id,
-            wild: _wild,
-            outcome: 'lost',
-          ));
         }
       }
     });
@@ -241,11 +233,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         _victory = true;
         _busy = false;
       });
-      unawaited(SupabaseService().logBattleEncounter(
-        ownWildkinId: persisted.id,
-        wild: _wild,
-        outcome: 'won',
-      ));
       await _persistTeamChanges(alreadyPersisted: persisted);
     } catch (e) {
       setState(() {
@@ -254,11 +241,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         _victory = true;
         _busy = false;
       });
-      unawaited(SupabaseService().logBattleEncounter(
-        ownWildkinId: _activeId,
-        wild: _wild,
-        outcome: 'won',
-      ));
     }
   }
 
@@ -268,9 +250,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   Future<void> _persistTeamChanges({Wildkin? alreadyPersisted}) async {
     if (_team == null) return;
     for (final member in _team!) {
-      if (alreadyPersisted != null && member.id == alreadyPersisted.id) {
-        continue;
-      }
+      if (alreadyPersisted != null && member.id == alreadyPersisted.id) continue;
       if (_startingHp[member.id] == member.currentHp) continue;
       try {
         await SupabaseService().updateAfterBattle(member);
@@ -294,14 +274,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (!success) {
       setState(() {
         _battleOver = true;
-        _log =
-            'The Wildkin got away! (odds were ${(probability * 100).round()}%)';
+        _log = 'The Wildkin got away! (odds were ${(probability * 100).round()}%)';
       });
-      unawaited(SupabaseService().logBattleEncounter(
-        ownWildkinId: _activeId,
-        wild: _wild,
-        outcome: 'catch_failed',
-      ));
       await _persistTeamChanges();
       return;
     }
@@ -314,12 +288,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final userId = Supabase.instance.client.auth.currentUser!.id;
 
     await Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (_) => const GeneratingScreen(isConfirmation: true)),
+      MaterialPageRoute(builder: (_) => const GeneratingScreen(isConfirmation: true)),
     );
-    await ref
-        .read(captureFlowProvider.notifier)
-        .captureConfirmation(userId: userId);
+    await ref.read(captureFlowProvider.notifier).captureConfirmation(userId: userId);
 
     if (!mounted) return;
     final state = ref.read(captureFlowProvider);
@@ -330,11 +301,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           "Couldn't confirm the capture. The Wildkin remains free, but "
               'you can go looking for it again.';
     });
-    unawaited(SupabaseService().logBattleEncounter(
-      ownWildkinId: _activeId,
-      wild: _wild,
-      outcome: 'catch_failed',
-    ));
     await _persistTeamChanges();
   }
 
@@ -347,11 +313,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       _fled = true;
       _log = "${_own.nickname} backs away. The wild Wildkin wasn't chased.";
     });
-    unawaited(SupabaseService().logBattleEncounter(
-      ownWildkinId: _activeId,
-      wild: _wild,
-      outcome: 'fled',
-    ));
     await _persistTeamChanges();
   }
 
@@ -380,15 +341,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                         child: _battleOver
                             ? _BattleOverPanel(
                                 log: _log,
-                                buttonLabel: _victory
-                                    ? 'CONTINUE'
-                                    : (_fled ? 'OK' : 'CLOSE'),
-                                onDone: () => Navigator.of(context)
-                                    .popUntil((r) => r.isFirst),
+                                buttonLabel: _victory ? 'CONTINUE' : (_fled ? 'OK' : 'CLOSE'),
+                                onDone: () =>
+                                    Navigator.of(context).popUntil((r) => r.isFirst),
                               )
                             : _BottomPanel(
                                 team: team,
                                 activeId: _activeId,
+                                wildTypes: _wild.types,
                                 log: _log,
                                 busy: _busy,
                                 mustSwitch: _mustSwitch,
@@ -439,17 +399,22 @@ class _Battlefield extends StatelessWidget {
               top: constraints.maxHeight * 0.16,
               right: 8,
               child: _GroundedVisual(
+                child: _OpponentVisual(photoUrl: wild.photoUrl, types: wild.types),
                 size: 130,
-                child:
-                    _OpponentVisual(photoUrl: wild.photoUrl, types: wild.types),
+                // A freshly met wild Wildkin is always stage 1.
+                creatureSize: WildkinPhysique.fromStats(
+                  wild.baseStats,
+                  currentStage: 1,
+                ).size,
               ),
             ),
             Positioned(
               bottom: constraints.maxHeight * 0.02,
               left: 4,
               child: _GroundedVisual(
-                size: 150,
                 child: SpriteImage(url: own.backSpriteUrl),
+                size: 150,
+                creatureSize: own.physique.size,
               ),
             ),
             Positioned(
@@ -459,8 +424,7 @@ class _Battlefield extends StatelessWidget {
               child: _InfoBox(
                 title: '${own.nickname} · Lv.${own.level}',
                 types: own.types,
-                fraction:
-                    ownStats.maxHp == 0 ? 0 : own.currentHp / ownStats.maxHp,
+                fraction: ownStats.maxHp == 0 ? 0 : own.currentHp / ownStats.maxHp,
                 hpLabel: '${own.currentHp}/${ownStats.maxHp}',
               ),
             ),
@@ -471,13 +435,32 @@ class _Battlefield extends StatelessWidget {
   }
 }
 
-/// A sprite with a soft dark ellipse "shadow platform" beneath it —
-/// a small, cheap touch that reads as more polished than a sprite
-/// floating with no ground contact.
+/// A sprite standing on a soft elliptical ground shadow. The
+/// shadow's width follows the creature's size class (XS..XL, derived
+/// from its weight — see WildkinPhysique): a tiny Wildkin casts a
+/// small oval, a huge one a wide oval. Sprite art itself is drawn at
+/// the same size for everyone, so the shadow is what communicates
+/// how big the creature really is.
 class _GroundedVisual extends StatelessWidget {
   final Widget child;
   final double size;
-  const _GroundedVisual({required this.child, required this.size});
+  final WildkinSize creatureSize;
+
+  const _GroundedVisual({
+    required this.child,
+    required this.size,
+    required this.creatureSize,
+  });
+
+  /// Shadow width as a fraction of the sprite box width. Capped so
+  /// the soft outer halo (1.15x) still fits inside the box.
+  static double _widthFactor(WildkinSize s) => switch (s) {
+        WildkinSize.xs => 0.36,
+        WildkinSize.s => 0.48,
+        WildkinSize.m => 0.60,
+        WildkinSize.l => 0.74,
+        WildkinSize.xl => 0.86,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -485,21 +468,61 @@ class _GroundedVisual extends StatelessWidget {
       width: size,
       height: size * 1.08,
       child: Stack(
-        alignment: Alignment.bottomCenter,
         children: [
-          Container(
-            width: size * 0.7,
-            height: size * 0.18,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(size),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: size * 0.04,
+            height: size * 0.34,
+            child: CustomPaint(
+              painter: _GroundShadowPainter(widthFactor: _widthFactor(creatureSize)),
             ),
           ),
-          SizedBox(width: size, height: size, child: child),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: size,
+            child: child,
+          ),
         ],
       ),
     );
   }
+}
+
+/// Two blurred ovals stacked: a wide, faint halo and a tighter,
+/// darker "contact" shadow right under the feet. The blur is what
+/// makes it read as a shadow instead of a flat shape.
+class _GroundShadowPainter extends CustomPainter {
+  final double widthFactor;
+  const _GroundShadowPainter({required this.widthFactor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final width = size.width * widthFactor;
+    final height = width * 0.26;
+    final center = size.center(Offset.zero);
+
+    final halo = Paint()
+      ..color = Colors.black.withValues(alpha: 0.14)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: width * 1.15, height: height * 1.3),
+      halo,
+    );
+
+    final contact = Paint()
+      ..color = Colors.black.withValues(alpha: 0.28)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: width * 0.8, height: height * 0.8),
+      contact,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GroundShadowPainter old) => old.widthFactor != widthFactor;
 }
 
 /// The wild opponent's visual during battle is the actual photo
@@ -514,8 +537,7 @@ class _OpponentVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (photoUrl.isEmpty) {
-      final color =
-          types.isEmpty ? AppColors.textMuted : TypeColors.of(types.first);
+      final color = types.isEmpty ? AppColors.textMuted : TypeColors.of(types.first);
       return Container(
         decoration: BoxDecoration(shape: BoxShape.circle, color: color),
         child: const Icon(Icons.help_outline, color: Colors.white, size: 48),
@@ -553,8 +575,7 @@ class _InfoBox extends StatelessWidget {
         color: AppColors.dialogBackground,
         borderRadius: BorderRadius.circular(14),
         boxShadow: const [
-          BoxShadow(
-              color: AppColors.shadowSoft, blurRadius: 6, offset: Offset(0, 3)),
+          BoxShadow(color: AppColors.shadowSoft, blurRadius: 6, offset: Offset(0, 3)),
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -566,9 +587,7 @@ class _InfoBox extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(title,
-                    style: AppFonts.pixelTitle(fontSize: 8),
-                    overflow: TextOverflow.ellipsis),
+                child: Text(title, style: AppFonts.pixelTitle(fontSize: 8), overflow: TextOverflow.ellipsis),
               ),
               TypeBadgeRow(types: types),
             ],
@@ -578,12 +597,8 @@ class _InfoBox extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: Stack(
               children: [
-                Container(
-                    height: 8,
-                    color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
-                FractionallySizedBox(
-                    widthFactor: f,
-                    child: Container(height: 8, color: barColor)),
+                Container(height: 8, color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
+                FractionallySizedBox(widthFactor: f, child: Container(height: 8, color: barColor)),
               ],
             ),
           ),
@@ -603,6 +618,7 @@ class _InfoBox extends StatelessWidget {
 class _BottomPanel extends StatelessWidget {
   final List<Wildkin> team;
   final String activeId;
+  final List<String> wildTypes;
   final String log;
   final bool busy;
   final bool mustSwitch;
@@ -614,6 +630,7 @@ class _BottomPanel extends StatelessWidget {
   const _BottomPanel({
     required this.team,
     required this.activeId,
+    required this.wildTypes,
     required this.log,
     required this.busy,
     required this.mustSwitch,
@@ -629,12 +646,6 @@ class _BottomPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TeamSwitchRow(
-            team: team,
-            activeId: activeId,
-            busy: busy && !mustSwitch,
-            onTap: onSwitch),
-        const SizedBox(height: 6),
         Text(
           mustSwitch ? 'Choose a Wildkin to send out!' : log,
           maxLines: 2,
@@ -648,6 +659,14 @@ class _BottomPanel extends StatelessWidget {
             enabled: !busy && !mustSwitch,
             onMove: onMove,
           ),
+        ),
+        const SizedBox(height: 8),
+        _TeamSwitchRow(
+          team: team,
+          activeId: activeId,
+          wildTypes: wildTypes,
+          busy: busy && !mustSwitch,
+          onTap: onSwitch,
         ),
         const SizedBox(height: 8),
         Row(
@@ -676,33 +695,65 @@ class _BottomPanel extends StatelessWidget {
   }
 }
 
-/// Row of up to 4 team avatars — tap to switch the active fighter.
-/// The active one is outlined; fainted ones are dimmed and disabled.
+/// Row of the BENCH only (the Wildkin currently fighting is hidden
+/// here — you can already see it in the battlefield above). Tap to
+/// switch it in.
+///
+/// Each bench member is circled green if it has a clear type
+/// advantage over the wild opponent, red if it has a clear
+/// disadvantage, or left uncircled if the matchup is mixed/neutral:
+///  - "advantage": at least one of its own types hits the wild
+///    super-effectively, AND none of the wild's types hit it
+///    super-effectively back.
+///  - "disadvantage": the reverse — the wild hits it hard and it
+///    doesn't hit back hard.
 class _TeamSwitchRow extends StatelessWidget {
   final List<Wildkin> team;
   final String activeId;
+  final List<String> wildTypes;
   final bool busy;
   final void Function(Wildkin) onTap;
 
   const _TeamSwitchRow({
     required this.team,
     required this.activeId,
+    required this.wildTypes,
     required this.busy,
     required this.onTap,
   });
 
+  /// Best-case multiplier if [attackerTypes] hit [defenderTypes] with
+  /// their strongest matching type.
+  double _bestEffectiveness(List<String> attackerTypes, List<String> defenderTypes) {
+    var best = 0.0;
+    for (final t in attackerTypes) {
+      final m = TypeChart.effectiveness(t, defenderTypes);
+      if (m > best) best = m;
+    }
+    return best;
+  }
+
+  Color? _matchupBorder(Wildkin bench) {
+    final offense = _bestEffectiveness(bench.types, wildTypes); // bench hitting wild
+    final defense = _bestEffectiveness(wildTypes, bench.types); // wild hitting bench
+    if (offense > 1.0 && defense <= 1.0) return AppColors.grassGreen;
+    if (offense <= 1.0 && defense > 1.0) return AppColors.emberRed;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bench = team.where((w) => w.id != activeId).toList();
     return SizedBox(
       height: 52,
       child: Row(
-        children: team.map((w) {
-          final isActive = w.id == activeId;
+        children: bench.map((w) {
           final fainted = w.currentHp <= 0;
+          final border = _matchupBorder(w);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: (busy || fainted || isActive) ? null : () => onTap(w),
+              onTap: (busy || fainted) ? null : () => onTap(w),
               child: Opacity(
                 opacity: fainted ? 0.35 : 1.0,
                 child: Container(
@@ -711,10 +762,7 @@ class _TeamSwitchRow extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.panelCream,
-                    border: Border.all(
-                      color: isActive ? AppColors.emberRed : Colors.transparent,
-                      width: 3,
-                    ),
+                    border: Border.all(color: border ?? Colors.transparent, width: 3),
                   ),
                   padding: const EdgeInsets.all(4),
                   child: ClipOval(child: SpriteImage(url: w.frontSpriteUrl)),
@@ -735,8 +783,7 @@ class _MovesGrid extends StatelessWidget {
   final bool enabled;
   final void Function(Move) onMove;
 
-  const _MovesGrid(
-      {required this.moves, required this.enabled, required this.onMove});
+  const _MovesGrid({required this.moves, required this.enabled, required this.onMove});
 
   @override
   Widget build(BuildContext context) {
@@ -746,19 +793,9 @@ class _MovesGrid extends StatelessWidget {
     }
     return Column(
       children: [
-        Expanded(
-            child: Row(children: [
-          _cell(slots[0]),
-          const SizedBox(width: 8),
-          _cell(slots[1])
-        ])),
+        Expanded(child: Row(children: [_cell(slots[0]), const SizedBox(width: 8), _cell(slots[1])])),
         const SizedBox(height: 8),
-        Expanded(
-            child: Row(children: [
-          _cell(slots[2]),
-          const SizedBox(width: 8),
-          _cell(slots[3])
-        ])),
+        Expanded(child: Row(children: [_cell(slots[2]), const SizedBox(width: 8), _cell(slots[3])])),
       ],
     );
   }
@@ -777,10 +814,7 @@ class _MovesGrid extends StatelessWidget {
             color: canUse ? TypeColors.of(move.type) : AppColors.textMuted,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
-              BoxShadow(
-                  color: AppColors.shadowSoft,
-                  blurRadius: 6,
-                  offset: Offset(0, 3)),
+              BoxShadow(color: AppColors.shadowSoft, blurRadius: 6, offset: Offset(0, 3)),
             ],
           ),
           padding: const EdgeInsets.all(10),
@@ -792,8 +826,7 @@ class _MovesGrid extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppFonts.pixelTitle(
-                    fontSize: 11, color: AppColors.textOnDark),
+                style: AppFonts.pixelTitle(fontSize: 11, color: AppColors.textOnDark),
               ),
               const SizedBox(height: 4),
               Text(
@@ -816,8 +849,7 @@ class _BattleOverPanel extends StatelessWidget {
   final String buttonLabel;
   final VoidCallback onDone;
 
-  const _BattleOverPanel(
-      {required this.log, required this.buttonLabel, required this.onDone});
+  const _BattleOverPanel({required this.log, required this.buttonLabel, required this.onDone});
 
   @override
   Widget build(BuildContext context) {
