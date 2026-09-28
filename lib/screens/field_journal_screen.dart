@@ -9,6 +9,7 @@ import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
+import '../widgets/dropdown_filter.dart';
 import '../providers/capture_flow_provider.dart';
 import 'help_screen.dart';
 import 'result_screen.dart';
@@ -200,73 +201,52 @@ class _JournalFilterBar extends StatelessWidget {
           ],
         ),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Type filter
-          SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                _Chip(label: 'ALL TYPES', selected: typeFilter == null, onTap: () => onTypeChanged(null)),
-                const SizedBox(width: 8),
-                for (final type in TypeChart.orderedTypes) ...[
-                  _Chip(
-                    label: type.toUpperCase(),
-                    color: TypeColors.of(type),
-                    selected: typeFilter == type,
-                    onTap: () => onTypeChanged(type),
+                DropdownFilter(
+                  label: 'TYPE',
+                  allLabel: 'All types',
+                  selected: typeFilter,
+                  options: TypeChart.orderedTypes,
+                  colorFor: TypeColors.of,
+                  onChanged: onTypeChanged,
+                ),
+                if (speciesOptions.isNotEmpty)
+                  DropdownFilter(
+                    label: 'ANIMAL',
+                    allLabel: 'All animals',
+                    selected: speciesFilter,
+                    options: speciesOptions,
+                    colorFor: (_) => AppColors.grassGreen,
+                    onChanged: onSpeciesChanged,
                   ),
-                  const SizedBox(width: 8),
-                ],
               ],
             ),
-          ),
-          if (speciesOptions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            // Species-of-origin filter (cat, dog, bird...) — only
-            // shows options that actually exist in the journal today.
-            SizedBox(
-              height: 32,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _Chip(label: 'ALL ANIMALS', selected: speciesFilter == null, onTap: () => onSpeciesChanged(null)),
-                  const SizedBox(width: 8),
-                  for (final species in speciesOptions) ...[
-                    _Chip(
-                      label: species.toUpperCase(),
-                      color: AppColors.grassGreen,
-                      selected: speciesFilter == species,
-                      onTap: () => onSpeciesChanged(species),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ],
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text('SORT BY DATE', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
+                const SizedBox(width: 10),
+                _Chip(
+                  label: 'NEWEST',
+                  selected: dateSort == _DateSort.newestFirst,
+                  color: AppColors.tidalBlue,
+                  onTap: () => onDateSortChanged(_DateSort.newestFirst),
+                ),
+                const SizedBox(width: 8),
+                _Chip(
+                  label: 'OLDEST',
+                  selected: dateSort == _DateSort.oldestFirst,
+                  color: AppColors.tidalBlue,
+                  onTap: () => onDateSortChanged(_DateSort.oldestFirst),
+                ),
+              ],
             ),
           ],
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text('SORT BY DATE', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
-              const SizedBox(width: 10),
-              _Chip(
-                label: 'NEWEST',
-                selected: dateSort == _DateSort.newestFirst,
-                color: AppColors.tidalBlue,
-                onTap: () => onDateSortChanged(_DateSort.newestFirst),
-              ),
-              const SizedBox(width: 8),
-              _Chip(
-                label: 'OLDEST',
-                selected: dateSort == _DateSort.oldestFirst,
-                color: AppColors.tidalBlue,
-                onTap: () => onDateSortChanged(_DateSort.oldestFirst),
-              ),
-            ],
-          ),
-        ],
         ),
       ),
     );

@@ -8,6 +8,7 @@ import '../widgets/route_background.dart';
 import '../widgets/gba_dialog_box.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
+import '../widgets/dropdown_filter.dart';
 import '../providers/capture_flow_provider.dart';
 import 'result_screen.dart';
 
@@ -142,81 +143,31 @@ class _FilterAndSortBar extends StatelessWidget {
             BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
           ],
         ),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 34,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _FilterChip(label: 'ALL', selected: selectedType == null, onTap: () => onTypeSelected(null)),
-                const SizedBox(width: 8),
-                for (final type in TypeChart.orderedTypes) ...[
-                  _FilterChip(
-                    label: type.toUpperCase(),
-                    color: TypeColors.of(type),
-                    selected: selectedType == type,
-                    onTap: () => onTypeSelected(type),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ],
+        child: Row(
+          children: [
+            DropdownFilter(
+              label: 'TYPE',
+              allLabel: 'All types',
+              selected: selectedType,
+              options: TypeChart.orderedTypes,
+              colorFor: TypeColors.of,
+              onChanged: onTypeSelected,
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text('SORT', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
-              const SizedBox(width: 10),
-              _SortToggle(
-                label: 'A–Z',
-                selected: sortMode == _SortMode.name,
-                onTap: () => onSortChanged(_SortMode.name),
-              ),
-              const SizedBox(width: 8),
-              _SortToggle(
-                label: 'LEVEL',
-                selected: sortMode == _SortMode.level,
-                onTap: () => onSortChanged(_SortMode.level),
-              ),
-            ],
-          ),
-        ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final Color? color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final base = color ?? AppColors.panelBrown;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? base : base.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppFonts.pixelTitle(fontSize: 8, color: selected ? Colors.white : base),
+            const Spacer(),
+            Text('SORT', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
+            const SizedBox(width: 10),
+            _SortToggle(
+              label: 'A–Z',
+              selected: sortMode == _SortMode.name,
+              onTap: () => onSortChanged(_SortMode.name),
+            ),
+            const SizedBox(width: 8),
+            _SortToggle(
+              label: 'LEVEL',
+              selected: sortMode == _SortMode.level,
+              onTap: () => onSortChanged(_SortMode.level),
+            ),
+          ],
         ),
       ),
     );
