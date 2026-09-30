@@ -10,6 +10,7 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
 import '../widgets/dropdown_filter.dart';
+import '../widgets/option_icons.dart';
 import '../providers/capture_flow_provider.dart';
 import 'help_screen.dart';
 import 'result_screen.dart';
@@ -213,6 +214,7 @@ class _JournalFilterBar extends StatelessWidget {
                   selected: typeFilter,
                   options: TypeChart.orderedTypes,
                   colorFor: TypeColors.of,
+                  iconBuilder: (type) => TypeOptionIcon(type: type),
                   onChanged: onTypeChanged,
                 ),
                 if (speciesOptions.isNotEmpty)
@@ -222,6 +224,7 @@ class _JournalFilterBar extends StatelessWidget {
                     selected: speciesFilter,
                     options: speciesOptions,
                     colorFor: (_) => AppColors.grassGreen,
+                    iconBuilder: (species) => AnimalOptionIcon(species: species),
                     onChanged: onSpeciesChanged,
                   ),
               ],

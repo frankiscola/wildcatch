@@ -9,6 +9,7 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
 import '../widgets/dropdown_filter.dart';
+import '../widgets/option_icons.dart';
 import '../providers/capture_flow_provider.dart';
 import 'result_screen.dart';
 
@@ -151,6 +152,7 @@ class _FilterAndSortBar extends StatelessWidget {
               selected: selectedType,
               options: TypeChart.orderedTypes,
               colorFor: TypeColors.of,
+              iconBuilder: (type) => TypeOptionIcon(type: type),
               onChanged: onTypeSelected,
             ),
             const Spacer(),
