@@ -50,6 +50,9 @@ dependencies:
   intl: ^0.20.3
   cupertino_icons: ^1.0.8
 
+  # Monetization: RevenueCat SDK (subscriptions + consumable tokens)
+  purchases_flutter: ^10.13.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -13,7 +13,9 @@ import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
 import '../services/supabase_service.dart';
+import '../models/sighting.dart';
 import 'home_screen.dart';
+import 'paywall_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final Wildkin wildkin;
@@ -26,7 +28,8 @@ class ResultScreen extends StatefulWidget {
   /// stack to the home screen.
   final bool isNewCapture;
 
-  const ResultScreen({super.key, required this.wildkin, this.isNewCapture = true});
+  const ResultScreen(
+      {super.key, required this.wildkin, this.isNewCapture = true});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -36,6 +39,39 @@ class _ResultScreenState extends State<ResultScreen> {
   bool _showFront = true;
   late Wildkin _wildkin;
   bool _updatingTeam = false;
+  bool _regeneratingSprite = false;
+
+  /// Rerolls front/back sprites, keeping the same photo/species as
+  /// reference. Spends a token (or is free if premium) — handled
+  /// entirely server-side, see regenerate-sprite/index.ts. If the
+  /// player has nothing left to spend, routes straight to the
+  /// paywall instead of showing a dead-end error.
+  Future<void> _handleRegenerateSprite() async {
+    setState(() => _regeneratingSprite = true);
+    try {
+      final updated = await SupabaseService().regenerateSprite(
+        wildkinId: _wildkin.id,
+      );
+      if (mounted) setState(() => _wildkin = updated);
+    } on SightingRejectedException catch (e) {
+      if (!mounted) return;
+      if (e.reason == SightingRejectionReason.noCapturesRemaining) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PaywallScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.reason.userMessage)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _regeneratingSprite = false);
+    }
+  }
 
   @override
   void initState() {
@@ -53,7 +89,8 @@ class _ResultScreenState extends State<ResultScreen> {
       setState(() => _wildkin = updated);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _updatingTeam = false);
@@ -69,7 +106,8 @@ class _ResultScreenState extends State<ResultScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Remove from team?'),
-          content: Text('${_wildkin.nickname} will be benched. You can add it back anytime.'),
+          content: Text(
+              '${_wildkin.nickname} will be benched. You can add it back anytime.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
@@ -77,7 +115,8 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('REMOVE', style: TextStyle(color: AppColors.emberRed)),
+              child: const Text('REMOVE',
+                  style: TextStyle(color: AppColors.emberRed)),
             ),
           ],
         ),
@@ -115,7 +154,27 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _showFront ? 'Front view' : 'Back view',
-                  style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+                  style:
+                      AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+                ),
+                TextButton.icon(
+                  icon: _regeneratingSprite
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh,
+                          size: 18, color: AppColors.tidalBlue),
+                  label: Text(
+                    _regeneratingSprite
+                        ? 'Rerolling...'
+                        : "Don't love the design? Reroll",
+                    style:
+                        AppFonts.body(fontSize: 13, color: AppColors.tidalBlue),
+                  ),
+                  onPressed:
+                      _regeneratingSprite ? null : _handleRegenerateSprite,
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -160,7 +219,9 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(height: 14),
                 PixelButton(
                   label: wildkin.isInTeam ? 'REMOVE FROM TEAM' : 'ADD TO TEAM',
-                  background: wildkin.isInTeam ? AppColors.emberRed : AppColors.grassGreen,
+                  background: wildkin.isInTeam
+                      ? AppColors.emberRed
+                      : AppColors.grassGreen,
                   onPressed: _updatingTeam ? null : _handleTeamButtonPressed,
                 ),
               ],
@@ -214,7 +275,8 @@ class _SpriteStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spriteUrl = showFront ? wildkin.frontSpriteUrl : wildkin.backSpriteUrl;
+    final spriteUrl =
+        showFront ? wildkin.frontSpriteUrl : wildkin.backSpriteUrl;
 
     return Container(
       width: double.infinity,
@@ -223,7 +285,10 @@ class _SpriteStage extends StatelessWidget {
         gradient: TypeColors.backgroundGradient(wildkin.types),
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 12, offset: Offset(0, 6)),
+          BoxShadow(
+              color: AppColors.shadowSoft,
+              blurRadius: 12,
+              offset: Offset(0, 6)),
         ],
       ),
       child: Stack(
@@ -284,7 +349,8 @@ class _LevelBadge extends StatelessWidget {
         color: AppColors.panelBrown,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(
+              color: AppColors.shadowSoft, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: Text(
@@ -337,9 +403,12 @@ class _PhysiqueStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
+        Text(label,
+            style:
+                AppFonts.pixelTitle(fontSize: 9, color: AppColors.textMuted)),
         const SizedBox(height: 6),
-        Text(value, style: AppFonts.body(fontSize: 17, color: AppColors.panelBrown)),
+        Text(value,
+            style: AppFonts.body(fontSize: 17, color: AppColors.panelBrown)),
       ],
     );
   }
@@ -363,11 +432,14 @@ class _EvolutionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            plan.totalStages == 3 ? 'Up to 2 evolutions possible' : 'Up to 1 evolution possible',
+            plan.totalStages == 3
+                ? 'Up to 2 evolutions possible'
+                : 'Up to 1 evolution possible',
             style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
           ),
           const SizedBox(height: 16),
-          _EvolutionTrack(currentStage: plan.currentStage, totalStages: plan.totalStages),
+          _EvolutionTrack(
+              currentStage: plan.currentStage, totalStages: plan.totalStages),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -377,7 +449,8 @@ class _EvolutionCard extends StatelessWidget {
             ),
             child: Text(
               plan.timingLabel(),
-              style: AppFonts.body(fontSize: 13, color: AppColors.emberRed).copyWith(
+              style: AppFonts.body(fontSize: 13, color: AppColors.emberRed)
+                  .copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -394,7 +467,8 @@ class _EvolutionCard extends StatelessWidget {
 class _EvolutionTrack extends StatelessWidget {
   final int currentStage;
   final int totalStages;
-  const _EvolutionTrack({required this.currentStage, required this.totalStages});
+  const _EvolutionTrack(
+      {required this.currentStage, required this.totalStages});
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +501,9 @@ class _StageNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outline = reached ? AppColors.grassGreen : AppColors.dialogBorderOuter.withValues(alpha: 0.25);
+    final outline = reached
+        ? AppColors.grassGreen
+        : AppColors.dialogBorderOuter.withValues(alpha: 0.25);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -443,13 +519,17 @@ class _StageNode extends StatelessWidget {
             child: reached
                 ? Text(
                     '$stage',
-                    style: AppFonts.pixelTitle(fontSize: 12, color: Colors.white),
+                    style:
+                        AppFonts.pixelTitle(fontSize: 12, color: Colors.white),
                   )
-                : Icon(Icons.question_mark, size: 14, color: AppColors.textMuted.withValues(alpha: 0.6)),
+                : Icon(Icons.question_mark,
+                    size: 14,
+                    color: AppColors.textMuted.withValues(alpha: 0.6)),
           ),
         ),
         const SizedBox(height: 4),
-        Text('STAGE $stage', style: AppFonts.body(fontSize: 9, color: AppColors.textMuted)),
+        Text('STAGE $stage',
+            style: AppFonts.body(fontSize: 9, color: AppColors.textMuted)),
       ],
     );
   }
@@ -546,8 +626,10 @@ class _TypingQualityChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: AppFonts.pixelTitle(fontSize: 8, color: Colors.white)),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style: AppFonts.pixelTitle(fontSize: 8, color: Colors.white)),
     );
   }
 }
@@ -576,7 +658,8 @@ class _MatchupRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppFonts.pixelTitle(fontSize: 9, color: labelColor ?? AppColors.textMuted),
+            style: AppFonts.pixelTitle(
+                fontSize: 9, color: labelColor ?? AppColors.textMuted),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -606,12 +689,36 @@ class _StatsCard extends StatelessWidget {
       title: 'STATS',
       child: Column(
         children: [
-          _StatBar(label: 'HP', value: stats.maxHp, max: 260, color: AppColors.grassGreen),
-          _StatBar(label: 'ATK', value: stats.attack, max: 200, color: AppColors.emberRed),
-          _StatBar(label: 'DEF', value: stats.defense, max: 200, color: AppColors.tidalBlue),
-          _StatBar(label: 'ELM. ATK', value: stats.elementalAttack, max: 200, color: const Color(0xFF9C6ADE)),
-          _StatBar(label: 'ELM. DEF', value: stats.elementalDefense, max: 200, color: const Color(0xFF4FA8A0)),
-          _StatBar(label: 'SPEED', value: stats.speed, max: 200, color: const Color(0xFFE0A62B)),
+          _StatBar(
+              label: 'HP',
+              value: stats.maxHp,
+              max: 260,
+              color: AppColors.grassGreen),
+          _StatBar(
+              label: 'ATK',
+              value: stats.attack,
+              max: 200,
+              color: AppColors.emberRed),
+          _StatBar(
+              label: 'DEF',
+              value: stats.defense,
+              max: 200,
+              color: AppColors.tidalBlue),
+          _StatBar(
+              label: 'ELM. ATK',
+              value: stats.elementalAttack,
+              max: 200,
+              color: const Color(0xFF9C6ADE)),
+          _StatBar(
+              label: 'ELM. DEF',
+              value: stats.elementalDefense,
+              max: 200,
+              color: const Color(0xFF4FA8A0)),
+          _StatBar(
+              label: 'SPEED',
+              value: stats.speed,
+              max: 200,
+              color: const Color(0xFFE0A62B)),
         ],
       ),
     );
@@ -649,7 +756,8 @@ class _StatBar extends StatelessWidget {
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: AppFonts.body(fontSize: 8, color: AppColors.textMuted),
+                    style:
+                        AppFonts.body(fontSize: 8, color: AppColors.textMuted),
                   ),
               ],
             ),
@@ -659,7 +767,10 @@ class _StatBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(7),
               child: Stack(
                 children: [
-                  Container(height: 14, color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
+                  Container(
+                      height: 14,
+                      color:
+                          AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
                   FractionallySizedBox(
                     widthFactor: fraction,
                     child: Container(height: 14, color: color),
@@ -701,7 +812,8 @@ class _MovesCard extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(m.name, style: AppFonts.body(fontSize: 16)),
+                            child: Text(m.name,
+                                style: AppFonts.body(fontSize: 16)),
                           ),
                           const SizedBox(width: 8),
                           TypeBadge(type: m.type),
@@ -712,9 +824,11 @@ class _MovesCard extends StatelessWidget {
                         children: m.category == MoveCategory.status
                             ? [_MoveStatChip(label: 'PP', value: '${m.maxPp}')]
                             : [
-                                _MoveStatChip(label: 'POW', value: '${m.power}'),
+                                _MoveStatChip(
+                                    label: 'POW', value: '${m.power}'),
                                 const SizedBox(width: 8),
-                                _MoveStatChip(label: 'ACC', value: '${m.accuracy}%'),
+                                _MoveStatChip(
+                                    label: 'ACC', value: '${m.accuracy}%'),
                                 const SizedBox(width: 8),
                                 _MoveStatChip(label: 'PP', value: '${m.maxPp}'),
                               ],
@@ -724,7 +838,8 @@ class _MovesCard extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             _mechanicLabel(m)!,
-                            style: AppFonts.body(fontSize: 11, color: AppColors.tidalBlue),
+                            style: AppFonts.body(
+                                fontSize: 11, color: AppColors.tidalBlue),
                           ),
                         ),
                     ],
@@ -773,11 +888,14 @@ class _MoveStatChip extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppFonts.pixelTitle(fontSize: 7, color: AppColors.textMuted)),
+          Text(label,
+              style:
+                  AppFonts.pixelTitle(fontSize: 7, color: AppColors.textMuted)),
           const SizedBox(height: 2),
           Text(
             value,
-            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown).copyWith(
+            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown)
+                .copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -894,14 +1012,16 @@ class _CaptureStoryCard extends StatelessWidget {
       runSpacing: 6,
       children: chips
           .map((label) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.panelBrown,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   label,
-                  style: AppFonts.body(fontSize: 12, color: AppColors.textOnDark),
+                  style:
+                      AppFonts.body(fontSize: 12, color: AppColors.textOnDark),
                 ),
               ))
           .toList(),
@@ -931,7 +1051,8 @@ class _ImprintCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             imprint.description,
-            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown).copyWith(
+            style: AppFonts.body(fontSize: 13, color: AppColors.panelBrown)
+                .copyWith(
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -960,14 +1081,17 @@ class _Panel extends StatelessWidget {
         color: AppColors.dialogBackground,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(
+              color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppFonts.pixelTitle(fontSize: 11, color: AppColors.emberRed)),
+          Text(title,
+              style:
+                  AppFonts.pixelTitle(fontSize: 11, color: AppColors.emberRed)),
           const SizedBox(height: 10),
           child,
         ],

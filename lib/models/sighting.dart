@@ -30,6 +30,7 @@ enum SightingRejectionReason {
   speciesMismatch,
   duplicateImage,
   suspiciousDuplicateOfOtherUser,
+  noCapturesRemaining,
   unknown;
 
   static SightingRejectionReason fromCode(String? code) {
@@ -44,6 +45,8 @@ enum SightingRejectionReason {
         return SightingRejectionReason.duplicateImage;
       case 'suspicious_duplicate_of_other_user':
         return SightingRejectionReason.suspiciousDuplicateOfOtherUser;
+      case 'no_captures_remaining':
+        return SightingRejectionReason.noCapturesRemaining;
       default:
         return SightingRejectionReason.unknown;
     }
@@ -63,6 +66,9 @@ enum SightingRejectionReason {
         return 'This photo looks identical to the previous one: try photographing it again live, maybe from another angle.';
       case SightingRejectionReason.suspiciousDuplicateOfOtherUser:
         return 'This image looks like it\'s already been seen elsewhere: make sure you\'re photographing a real animal in front of you.';
+      case SightingRejectionReason.noCapturesRemaining:
+        return "You're out of captures for today — unlock Wildkin Plus "
+            'for unlimited captures, or grab a few extra tokens.';
       case SightingRejectionReason.unknown:
         return 'The sighting could not be confirmed. Please try again.';
     }

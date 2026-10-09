@@ -6,8 +6,10 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/capture_spinner.dart';
 import '../widgets/pixel_button.dart';
 import '../providers/capture_flow_provider.dart';
+import '../models/sighting.dart';
 import 'capture_screen.dart';
 import 'result_screen.dart';
+import 'paywall_screen.dart';
 
 /// Screen shown during each individual shot (both the first sighting
 /// and the confirmation): gathering context, liveness analysis,
@@ -83,8 +85,16 @@ class GeneratingScreen extends ConsumerWidget {
 
       // Confirmation rejected but the window is still open: go back
       // to the confirmation screen (which will show the rejection
-      // reason and let the player immediately try another shot).
+      // reason and let the player immediately try another shot) —
+      // EXCEPT for "out of captures", where retrying a photo can't
+      // possibly help: that one goes to the paywall instead.
       if (isConfirmation && next.step == CaptureStep.rejected) {
+        if (next.rejectionReason == SightingRejectionReason.noCapturesRemaining) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const PaywallScreen()),
+          );
+          return;
+        }
         Navigator.of(context).pop();
         return;
       }

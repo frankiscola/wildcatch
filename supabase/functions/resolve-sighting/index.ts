@@ -26,6 +26,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import type { CaptureContextJson } from "../_shared/typing_engine.ts";
 import { finalizeCapture } from "../_shared/finalize_capture.ts";
 import { computeAverageHash, hammingDistance } from "../_shared/phash.ts";
+import { consumeCaptureCredit, refundCredit } from "../_shared/entitlements.ts";
 
 // ── Thresholds, all to be recalibrated with real usage data ──
 const SIGHTING_WINDOW_MINUTES = 20;
@@ -72,6 +73,19 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
+    // Separate service-role client, used ONLY for the entitlements
+    // table (profiles): that table has no client-writable RLS
+    // policy on purpose (see 0004_monetization.sql), so a normal
+    // user-scoped client could never spend/refund credits, even a
+    // tampered one. The distinction matters: everything else in this
+    // function keeps using the user-scoped `supabase` client above,
+    // whose RLS policies are the real protection for sightings/
+    // photo_hashes/captures.
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
       return jsonResponse({ error: "Invalid or expired token." }, 401);
@@ -81,7 +95,7 @@ Deno.serve(async (req: Request) => {
     if (action === "record") {
       return await handleRecord(supabase, userId, body);
     }
-    return await handleConfirm(supabase, userId, body);
+    return await handleConfirm(supabase, supabaseAdmin, userId, body);
   } catch (e) {
     console.error("Unhandled error:", e);
     return jsonResponse({ error: "Internal error." }, 500);
@@ -141,6 +155,7 @@ async function handleRecord(
 
 async function handleConfirm(
   supabase: SupabaseClient,
+  supabaseAdmin: SupabaseClient,
   userId: string,
   body: RequestBody,
 ): Promise<Response> {
@@ -195,15 +210,32 @@ async function handleConfirm(
     return jsonResponse({ reason: "suspicious_duplicate_of_other_user" }, 409);
   }
 
+  // Only NOW, after every anti-spoof check has passed, do we spend a
+  // credit: a failed attempt (expired, too far, species mismatch,
+  // duplicate...) must never cost the player anything, since nothing
+  // was actually generated for them.
+  const creditSource = await consumeCaptureCredit(supabaseAdmin, userId);
+  if (creditSource === null) {
+    return jsonResponse({ reason: "no_captures_remaining" }, 409);
+  }
+
   // All checks passed: finalize the capture using the context of
   // THIS second shot (that's the moment the capture is actually
-  // completed).
-  const inserted = await finalizeCapture(supabase, {
-    userId,
-    originalPhotoUrl: body.original_photo_url,
-    speciesHint: newSpecies ?? sighting.species_hint ?? "???",
-    context: body.context,
-  });
+  // completed). If finalization blows up on OUR side (e.g. a database
+  // insert error), give the credit back before re-throwing: the
+  // player got nothing, so they shouldn't pay for it.
+  let inserted;
+  try {
+    inserted = await finalizeCapture(supabase, {
+      userId,
+      originalPhotoUrl: body.original_photo_url,
+      speciesHint: newSpecies ?? sighting.species_hint ?? "???",
+      context: body.context,
+    });
+  } catch (e) {
+    await refundCredit(supabaseAdmin, userId, creditSource);
+    throw e;
+  }
 
   await supabase
     .from("sightings")

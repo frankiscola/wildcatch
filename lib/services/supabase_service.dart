@@ -5,6 +5,7 @@ import '../models/wildkin.dart';
 import '../models/wild_encounter.dart';
 import '../models/sighting.dart';
 import '../models/battle_log_entry.dart';
+import '../models/entitlement_status.dart';
 
 /// Single point of access to Supabase: initialization, uploading the
 /// original photo, and invoking the edge function that generates the
@@ -300,6 +301,51 @@ class SupabaseService {
     return (rows as List)
         .map((row) => BattleLogEntry.fromJson(row as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Current premium/token status, for display only (e.g. "2 captures
+  /// left today" on the home screen, or the paywall's own header).
+  /// Never trust this for gating — resolve-sighting and
+  /// regenerate-sprite independently re-check server-side before
+  /// spending anything.
+  Future<EntitlementStatus> getEntitlementStatus() async {
+    final response = await client.functions.invoke('get-entitlements');
+
+    if (response.status != 200) {
+      throw SupabaseServiceException(
+        'Could not load your capture status (status ${response.status}).',
+      );
+    }
+
+    return EntitlementStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Regenerates the sprite of an already-caught Wildkin, keeping the
+  /// same photo/species as reference — the "reroll if you don't love
+  /// it" feature. Spends a token (or is free if premium); throws
+  /// [SightingRejectedException] with
+  /// [SightingRejectionReason.noCapturesRemaining] if there's nothing
+  /// left to spend.
+  Future<Wildkin> regenerateSprite({required String wildkinId}) async {
+    final response = await client.functions.invoke(
+      'regenerate-sprite',
+      body: {'wildkin_id': wildkinId},
+    );
+
+    if (response.status == 409) {
+      final data = response.data as Map<String, dynamic>?;
+      final reason =
+          SightingRejectionReason.fromCode(data?['reason'] as String?);
+      throw SightingRejectedException(reason);
+    }
+
+    if (response.status != 200) {
+      throw SupabaseServiceException(
+        'Sprite regeneration failed (status ${response.status}).',
+      );
+    }
+
+    return Wildkin.fromJson(response.data as Map<String, dynamic>);
   }
 }
 
