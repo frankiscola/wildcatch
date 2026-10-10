@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/battle_log_entry.dart';
+import '../models/move.dart';
+import '../models/stats.dart';
+import '../models/wildkin_physique.dart';
 import '../models/type_chart.dart';
 import '../models/wildkin.dart';
 import '../theme/app_colors.dart';
@@ -22,12 +25,12 @@ enum _DateSort { newestFirst, oldestFirst }
 /// caught (from [battleLogsProvider]) shown as dimmed "seen" cards.
 /// This is the app's default landing tab.
 ///
-/// Deliberately leaner than the Collection: no level, no moves, no
-/// "manage my team" actions — this is a log of encounters, not a
-/// management screen. Tapping any card opens a small info popup
-/// instead of the full detail screen; owned Wildkin get an extra
-/// button in that popup to jump to the full screen if they want it,
-/// merely-seen ones don't (there's nothing more to show for those).
+/// Leaner than the Collection: no "manage my team" actions — this is
+/// a log of encounters, not a management screen. Tapping any card
+/// opens an info popup with level, size, stats and moves (for seen
+/// encounters, only if they were logged after stats started being
+/// saved); owned Wildkin get an extra button to jump to the full
+/// detail screen.
 class FieldJournalScreen extends ConsumerStatefulWidget {
   const FieldJournalScreen({super.key});
 
@@ -166,6 +169,12 @@ class _JournalEntry {
   List<String> get types => isOwned ? wildkin!.types : sighting!.types;
   String? get speciesHint => isOwned ? wildkin!.speciesHint : sighting!.speciesHint;
   DateTime get date => isOwned ? wildkin!.captureContext.capturedAt : sighting!.createdAt;
+
+  int get level => isOwned ? wildkin!.level : sighting!.level;
+  ComputedStats? get stats => isOwned ? wildkin!.computeStats() : sighting!.computeStats();
+  WildkinPhysique? get physique => isOwned ? wildkin!.physique : sighting!.physique;
+  List<Move> get moves =>
+      isOwned ? wildkin!.moves.map((m) => m.move).toList() : sighting!.moves;
 }
 
 class _JournalFilterBar extends StatelessWidget {
@@ -357,7 +366,8 @@ class _JournalCard extends StatelessWidget {
           owned ? entry.wildkin!.nickname : 'Wild encounter',
           style: AppFonts.pixelTitle(fontSize: 13),
         ),
-        content: Column(
+        content: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -371,7 +381,10 @@ class _JournalCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(outcomeLabel, style: AppFonts.body(fontSize: 14)),
             ],
+            const SizedBox(height: 12),
+            _EncounterDetails(entry: entry),
           ],
+          ),
         ),
         actions: [
           if (owned)
@@ -399,5 +412,107 @@ class _JournalCard extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}
+
+
+/// Level, size/weight, stat bars and moves for a journal entry. Shows
+/// a short note instead if the entry is an older "seen" one logged
+/// before stats/moves were saved.
+class _EncounterDetails extends StatelessWidget {
+  final _JournalEntry entry;
+
+  const _EncounterDetails({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = entry.stats;
+    final physique = entry.physique;
+
+    if (stats == null || physique == null) {
+      return Text(
+        'Lv. ${entry.level} — no detailed stats were recorded for this encounter.',
+        style: AppFonts.body(fontSize: 13, color: AppColors.textMuted),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Lv. ${entry.level}  ·  Size ${physique.size.label}  ·  ${physique.weightKg.toStringAsFixed(1)} kg',
+          style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.panelBrown),
+        ),
+        const SizedBox(height: 10),
+        _StatRow(label: 'HP', value: stats.maxHp, max: 260, color: AppColors.grassGreen),
+        _StatRow(label: 'ATK', value: stats.attack, max: 200, color: AppColors.emberRed),
+        _StatRow(label: 'DEF', value: stats.defense, max: 200, color: AppColors.tidalBlue),
+        _StatRow(label: 'ELM. ATK', value: stats.elementalAttack, max: 200, color: const Color(0xFF9C6ADE)),
+        _StatRow(label: 'ELM. DEF', value: stats.elementalDefense, max: 200, color: const Color(0xFF4FA8A0)),
+        _StatRow(label: 'SPEED', value: stats.speed, max: 200, color: const Color(0xFFE0A62B)),
+        if (entry.moves.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('MOVES', style: AppFonts.pixelTitle(fontSize: 9, color: AppColors.emberRed)),
+          const SizedBox(height: 6),
+          ...entry.moves.map(
+            (m) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Expanded(child: Text(m.name, style: AppFonts.body(fontSize: 14))),
+                  Text(
+                    m.category == MoveCategory.status
+                        ? 'PP ${m.maxPp}'
+                        : 'Pow ${m.power} · Acc ${m.accuracy}%',
+                    style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final int max;
+  final Color color;
+
+  const _StatRow({required this.label, required this.value, required this.max, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = (value / max).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(width: 62, child: Text(label, style: AppFonts.pixelTitle(fontSize: 8))),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Stack(
+                children: [
+                  Container(height: 10, color: AppColors.dialogBorderOuter.withValues(alpha: 0.12)),
+                  FractionallySizedBox(
+                    widthFactor: fraction,
+                    child: Container(height: 10, color: color),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 30,
+            child: Text('$value', textAlign: TextAlign.right, style: AppFonts.body(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -280,6 +280,12 @@ class SupabaseService {
         'photo_url': wild.photoUrl,
         'types': wild.types,
         'level': wild.level,
+        // Stored so the Field Journal can show size/stats/moves for
+        // Wildkin that were seen but never caught. wild_snapshot is
+        // jsonb, so no migration is needed; older entries simply won't
+        // have these keys (BattleLogEntry reads them defensively).
+        'base_stats': wild.baseStats.toJson(),
+        'moves': wild.moves.map((m) => m.toJson()).toList(),
       },
       'outcome': outcome,
     });

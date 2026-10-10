@@ -1,3 +1,7 @@
+import 'move.dart';
+import 'stats.dart';
+import 'wildkin_physique.dart';
+
 /// A logged wild encounter from `battle_logs` — used only to show
 /// Wildkin that were fought but never caught in the Field Journal.
 /// Deliberately minimal (just enough to render a "seen" card): the
@@ -19,6 +23,11 @@ class BattleLogEntry {
   /// migration of this model.
   final String? speciesHint;
 
+  /// Only present on entries logged after stats/moves started being
+  /// saved in the snapshot; null/empty for older ones.
+  final BaseStats? baseStats;
+  final List<Move> moves;
+
   const BattleLogEntry({
     required this.id,
     required this.photoUrl,
@@ -27,7 +36,29 @@ class BattleLogEntry {
     required this.outcome,
     required this.createdAt,
     this.speciesHint,
+    this.baseStats,
+    this.moves = const [],
   });
+
+  /// Effective stats at the encounter's level (same formula as
+  /// Wildkin.computeStats), or null if this entry predates stats logging.
+  ComputedStats? computeStats() {
+    final b = baseStats;
+    if (b == null) return null;
+    int statAt(int base) => (((2 * base) * level) / 100).floor() + 5;
+    return ComputedStats(
+      maxHp: (((2 * b.hp) * level) / 100).floor() + level + 10,
+      attack: statAt(b.attack),
+      defense: statAt(b.defense),
+      elementalAttack: statAt(b.elementalAttack),
+      elementalDefense: statAt(b.elementalDefense),
+      speed: statAt(b.speed),
+    );
+  }
+
+  /// Wild encounters are always base-stage (1).
+  WildkinPhysique? get physique =>
+      baseStats == null ? null : WildkinPhysique.fromStats(baseStats!, currentStage: 1);
 
   factory BattleLogEntry.fromJson(Map<String, dynamic> json) {
     final snapshot = json['wild_snapshot'] as Map<String, dynamic>;
@@ -39,6 +70,14 @@ class BattleLogEntry {
       outcome: json['outcome'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       speciesHint: snapshot['species_hint'] as String?,
+      baseStats: snapshot['base_stats'] is Map<String, dynamic>
+          ? BaseStats.fromJson(snapshot['base_stats'] as Map<String, dynamic>)
+          : null,
+      moves: snapshot['moves'] is List
+          ? (snapshot['moves'] as List)
+              .map((m) => Move.fromJson(m as Map<String, dynamic>))
+              .toList()
+          : const [],
     );
   }
 }
