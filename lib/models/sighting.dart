@@ -31,6 +31,7 @@ enum SightingRejectionReason {
   duplicateImage,
   suspiciousDuplicateOfOtherUser,
   noCapturesRemaining,
+  imageBlocked,
   unknown;
 
   static SightingRejectionReason fromCode(String? code) {
@@ -47,6 +48,8 @@ enum SightingRejectionReason {
         return SightingRejectionReason.suspiciousDuplicateOfOtherUser;
       case 'no_captures_remaining':
         return SightingRejectionReason.noCapturesRemaining;
+      case 'image_blocked':
+        return SightingRejectionReason.imageBlocked;
       default:
         return SightingRejectionReason.unknown;
     }
@@ -69,6 +72,8 @@ enum SightingRejectionReason {
       case SightingRejectionReason.noCapturesRemaining:
         return "You're out of captures for today — unlock Wildkin Plus "
             'for unlimited captures, or grab a few extra tokens.';
+      case SightingRejectionReason.imageBlocked:
+        return 'The sprite could not be generated for this photo. You were not charged: try again, or use a photo with just the animal in it.';
       case SightingRejectionReason.unknown:
         return 'The sighting could not be confirmed. Please try again.';
     }

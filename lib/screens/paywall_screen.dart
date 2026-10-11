@@ -59,10 +59,28 @@ class _PaywallScreenState extends State<PaywallScreen> {
         _status = results[1] as EntitlementStatus;
       });
     } catch (e) {
-      if (mounted) setState(() => _loadError = e.toString());
+      debugPrint('Paywall load failed: $e');
+      if (mounted) setState(() => _loadError = _friendlyStoreError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Turns a store/RevenueCat error into something a player can
+  /// understand. The raw error is still printed to the console.
+  String _friendlyStoreError(Object e) {
+    if (e is PlatformException) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      if (code == PurchasesErrorCode.purchaseNotAllowedError ||
+          code == PurchasesErrorCode.storeProblemError) {
+        return 'Purchases are not available on this device. '
+            'Make sure Google Play is installed and you are signed in.';
+      }
+      if (code == PurchasesErrorCode.networkError) {
+        return 'No connection. Check your internet and try again.';
+      }
+    }
+    return 'The store could not be reached right now. Please try again.';
   }
 
   Future<void> _purchase(Package package) async {
@@ -85,7 +103,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) return;
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Purchase failed: ${e.message ?? errorCode}')));
+            .showSnackBar(SnackBar(content: Text(_friendlyStoreError(e))));
       }
     } catch (e) {
       if (mounted) {

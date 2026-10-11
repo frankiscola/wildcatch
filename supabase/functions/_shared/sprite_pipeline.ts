@@ -14,23 +14,15 @@
 
 import { askAboutImages, generateImage, type ImageReference } from "./image_generation_client.ts";
 import { resizeToSpriteSize } from "./sprite_postprocess.ts";
+import {
+  BACK_PROMPT,
+  buildSpritePrompt,
+  EVOLUTION_1_PROMPT,
+  EVOLUTION_2_PROMPT,
+  FRONT_PROMPT,
+} from "./sprite_prompts.ts";
 
 const SPRITE_SIZE = 128; // see sprite_postprocess.ts for why
-
-const STYLE_PROMPT =
-  "Reinterpret the subject as a collectible creature in a retro " +
-  "video-game style (chibi proportions, thick black outlines, flat " +
-  "colors, soft lighting, single neutral-colored background), " +
-  "an original design, not modeled on any existing character. " +
-  "Full-body framing.";
-
-const BACK_PROMPT =
-  "The exact same creature as in the attached image: same color " +
-  "palette, same standing pose, same accessories/patterns. Show it, " +
-  "however, viewed EXACTLY from behind (not 3/4): head not visible or " +
-  "only in profile, limbs mirrored relative to the front view. A " +
-  "slightly simpler and less detailed version than the front, as is " +
-  "typical of back sprites in this kind of game.";
 
 export interface SpriteResult {
   front: ImageReference;
@@ -40,21 +32,53 @@ export interface SpriteResult {
 export async function generateSprites(
   photo: ImageReference,
   speciesHint: string | null,
+  types: string[],
 ): Promise<SpriteResult> {
-  const speciesNote = speciesHint ? `The subject is an animal of the "${speciesHint}" kind. ` : "";
-
   const front = await generateImage(
-    `${speciesNote}${STYLE_PROMPT} Front view, the subject looking toward the camera.`,
+    buildSpritePrompt(FRONT_PROMPT, types, speciesHint),
     [photo],
   );
+  return await completeWithBack(front, speciesHint, types);
+}
 
-  let back = await generateImage(BACK_PROMPT, [front]);
+/// Sprites for an EVOLVED form. [previousFront] is the front sprite of
+/// the previous stage (stage 1 -> the base form's front; stage 2 -> the
+/// first evolution's front), passed as the reference image so "same
+/// subject" actually means something. [types] should be the types the
+/// creature has AFTER evolving.
+///
+/// NOTE: not called from anywhere yet — evolution is resolved client
+/// side today and there are no per-stage sprite columns. Also, stored
+/// sprites are 128x128, a low-resolution reference for the model.
+export async function generateEvolutionSprites(
+  previousFront: ImageReference,
+  stage: 1 | 2,
+  speciesHint: string | null,
+  types: string[],
+): Promise<SpriteResult> {
+  const template = stage === 1 ? EVOLUTION_1_PROMPT : EVOLUTION_2_PROMPT;
+  const front = await generateImage(
+    buildSpritePrompt(template, types, speciesHint),
+    [previousFront],
+  );
+  return await completeWithBack(front, speciesHint, types);
+}
+
+/// Shared tail of both pipelines: back view chained from the front,
+/// plausibility check with one retry, then resize.
+async function completeWithBack(
+  front: ImageReference,
+  speciesHint: string | null,
+  types: string[],
+): Promise<SpriteResult> {
+  const backPrompt = buildSpritePrompt(BACK_PROMPT, types, speciesHint);
+  let back = await generateImage(backPrompt, [front]);
 
   const plausible = await backLooksLikeSameCreature(front, back);
   if (!plausible) {
     // Generation isn't deterministic: a second attempt with the
     // exact same prompt is often enough to correct course.
-    back = await generateImage(BACK_PROMPT, [front]);
+    back = await generateImage(backPrompt, [front]);
   }
 
   // Resize ONLY at the end: the plausibility check above works on

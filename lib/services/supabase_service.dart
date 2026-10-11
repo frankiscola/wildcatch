@@ -326,23 +326,37 @@ class SupabaseService {
     return EntitlementStatus.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Regenerates the sprite of an already-caught Wildkin, keeping the
-  /// same photo/species as reference — the "reroll if you don't love
-  /// it" feature. Spends a token (or is free if premium); throws
-  /// [SightingRejectedException] with
+  /// Asks the server for a NEW sprite design for an already-caught
+  /// Wildkin, keeping the same photo/species as reference — the
+  /// "reroll if you don't love it" feature. Spends a token (or is free
+  /// if premium); throws [SightingRejectedException] with
   /// [SightingRejectionReason.noCapturesRemaining] if there's nothing
   /// left to spend.
-  Future<Wildkin> regenerateSprite({required String wildkinId}) async {
-    final response = await client.functions.invoke(
-      'regenerate-sprite',
-      body: {'wildkin_id': wildkinId},
-    );
-
-    if (response.status == 409) {
-      final data = response.data as Map<String, dynamic>?;
-      final reason =
-          SightingRejectionReason.fromCode(data?['reason'] as String?);
-      throw SightingRejectedException(reason);
+  ///
+  /// Returns a CANDIDATE only: nothing is overwritten until the player
+  /// chooses, see [applySprites].
+  Future<SpriteCandidate> regenerateSprite({required String wildkinId}) async {
+    FunctionResponse response;
+    try {
+      response = await client.functions.invoke(
+        'regenerate-sprite',
+        body: {'wildkin_id': wildkinId},
+      );
+    } catch (e) {
+      // supabase_flutter 2.x throws on any non-2xx status instead of
+      // returning it, so 409/422 must be mapped here (the status
+      // checks below are only reached on success). The exception
+      // class name differs between functions_client versions, so
+      // status/details are read dynamically.
+      final status = _statusOf(e);
+      final details = _detailsOf(e);
+      if (status == 409 || status == 422) {
+        final code = details is Map ? details['reason'] as String? : null;
+        throw SightingRejectedException(SightingRejectionReason.fromCode(code));
+      }
+      throw SupabaseServiceException(
+        'Sprite regeneration failed (status ${status ?? 'unknown'}).',
+      );
     }
 
     if (response.status != 200) {
@@ -351,8 +365,56 @@ class SupabaseService {
       );
     }
 
-    return Wildkin.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data as Map<String, dynamic>;
+    return SpriteCandidate(
+      frontUrl: data['front_sprite_url'] as String,
+      backUrl: data['back_sprite_url'] as String,
+    );
   }
+
+  /// Makes a [SpriteCandidate] the Wildkin's current design (the
+  /// player picked "use new"). Same trust model as [setTeamMembership]:
+  /// a plain update on a row the player owns, guarded by RLS.
+  Future<Wildkin> applySprites({
+    required String wildkinId,
+    required SpriteCandidate sprites,
+  }) async {
+    final row = await client
+        .from('captures')
+        .update({
+          'front_sprite_url': sprites.frontUrl,
+          'back_sprite_url': sprites.backUrl,
+        })
+        .eq('id', wildkinId)
+        .select()
+        .single();
+    return Wildkin.fromJson(row);
+  }
+
+  static int? _statusOf(Object e) {
+    try {
+      final v = (e as dynamic).status ?? (e as dynamic).statusCode;
+      return v is int ? v : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static dynamic _detailsOf(Object e) {
+    try {
+      return (e as dynamic).details;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// A freshly generated front/back sprite pair that has not been
+/// applied to a Wildkin yet.
+class SpriteCandidate {
+  final String frontUrl;
+  final String backUrl;
+  const SpriteCandidate({required this.frontUrl, required this.backUrl});
 }
 
 class TeamFullException implements Exception {

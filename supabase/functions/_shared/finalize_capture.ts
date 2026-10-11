@@ -65,6 +65,7 @@ export async function finalizeCapture(
     const sprites = await generateSprites(
       { bytes: photoBytes, mimeType: guessMimeType(originalPhotoUrl) },
       speciesHint,
+      types,
     );
 
     const spriteId = crypto.randomUUID();

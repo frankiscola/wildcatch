@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/wildkin.dart';
 import '../models/capture_context.dart';
@@ -12,6 +13,7 @@ import '../widgets/gba_dialog_box.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/type_badge.dart';
 import '../widgets/sprite_image.dart';
+import '../widgets/capture_spinner.dart';
 import '../services/supabase_service.dart';
 import '../models/sighting.dart';
 import 'home_screen.dart';
@@ -42,19 +44,157 @@ class _ResultScreenState extends State<ResultScreen> {
   bool _regeneratingSprite = false;
 
   /// Rerolls front/back sprites, keeping the same photo/species as
-  /// reference. Spends a token (or is free if premium) — handled
-  /// entirely server-side, see regenerate-sprite/index.ts. If the
-  /// player has nothing left to spend, routes straight to the
-  /// paywall instead of showing a dead-end error.
+  /// reference. Flow: warn it takes a while -> loading screen -> show
+  /// the new design next to the current one -> the player chooses.
+  /// Nothing is overwritten until they pick "use new".
+  ///
+  /// Spending the token is handled entirely server-side, see
+  /// regenerate-sprite/index.ts. If the player has nothing left to
+  /// spend, routes straight to the paywall instead of showing a
+  /// dead-end error.
   Future<void> _handleRegenerateSprite() async {
+    if (!await _confirmReroll() || !mounted) return;
+
     setState(() => _regeneratingSprite = true);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _RerollProgressDialog(),
+    );
+
+    SpriteCandidate? candidate;
+    Object? error;
     try {
-      final updated = await SupabaseService().regenerateSprite(
+      candidate = await SupabaseService().regenerateSprite(
         wildkinId: _wildkin.id,
       );
-      if (mounted) setState(() => _wildkin = updated);
-    } on SightingRejectedException catch (e) {
+    } catch (e) {
+      error = e;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // close loading dialog
+    setState(() => _regeneratingSprite = false);
+
+    if (error != null) {
+      _showRerollError(error);
+      return;
+    }
+
+    final newSprites = candidate!;
+    final useNew = await _askWhichToKeep(newSprites);
+    if (!mounted) return;
+    if (!useNew) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kept your current design.')),
+      );
+      return;
+    }
+
+    setState(() => _regeneratingSprite = true);
+    try {
+      final updated = await SupabaseService().applySprites(
+        wildkinId: _wildkin.id,
+        sprites: newSprites,
+      );
       if (!mounted) return;
+      setState(() {
+        _wildkin = updated;
+        _showFront = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New design saved!')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save the new design: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _regeneratingSprite = false);
+    }
+  }
+
+  Future<bool> _confirmReroll() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reroll the design?'),
+        content: const Text(
+          'Creating a new design takes a while: usually a minute or more. '
+          'Please keep the app open until it finishes.\n\n'
+          "You'll see the new design next to your current one and choose "
+          'which to keep. A reroll uses 1 capture token (free with Wildkin '
+          'Plus), even if you end up keeping the current design.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('REROLL'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  /// Side-by-side comparison. Returns true for "use new". Not
+  /// dismissible by tapping outside: the player must pick explicitly.
+  Future<bool> _askWhichToKeep(SpriteCandidate candidate) async {
+    final useNew = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Which design do you prefer?'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _SpriteChoiceColumn(
+                    label: 'CURRENT',
+                    frontUrl: _wildkin.frontSpriteUrl,
+                    backUrl: _wildkin.backSpriteUrl,
+                    types: _wildkin.types,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SpriteChoiceColumn(
+                    label: 'NEW',
+                    frontUrl: candidate.frontUrl,
+                    backUrl: candidate.backUrl,
+                    types: _wildkin.types,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('KEEP CURRENT'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('USE NEW'),
+          ),
+        ],
+      ),
+    );
+    return useNew == true;
+  }
+
+  void _showRerollError(Object e) {
+    if (e is SightingRejectedException) {
       if (e.reason == SightingRejectionReason.noCapturesRemaining) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const PaywallScreen()),
@@ -63,14 +203,10 @@ class _ResultScreenState extends State<ResultScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(e.reason.userMessage)));
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) setState(() => _regeneratingSprite = false);
+      return;
     }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(e.toString())));
   }
 
   @override
@@ -1096,6 +1232,139 @@ class _Panel extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+
+/// Loading screen shown while the server generates the new design.
+/// The server doesn't report progress, so the messages are tied to
+/// elapsed time: they are an estimate of what is happening (photo ->
+/// front -> back -> check), not live progress.
+class _RerollProgressDialog extends StatefulWidget {
+  const _RerollProgressDialog();
+
+  @override
+  State<_RerollProgressDialog> createState() => _RerollProgressDialogState();
+}
+
+class _RerollProgressDialogState extends State<_RerollProgressDialog> {
+  static const List<(int, String)> _stages = [
+    (0, 'Studying your photo...'),
+    (10, 'Sketching the front view...'),
+    (35, 'Turning it around for the back view...'),
+    (60, 'Checking that front and back match...'),
+    (80, 'Still working: good designs take time...'),
+  ];
+
+  late final Timer _timer;
+  int _elapsed = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsed++);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  String get _message {
+    var message = _stages.first.$2;
+    for (final stage in _stages) {
+      if (_elapsed >= stage.$1) message = stage.$2;
+    }
+    return message;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: AppColors.dialogBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CaptureSpinner(size: 72),
+              const SizedBox(height: 20),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _message,
+                  key: ValueKey(_message),
+                  textAlign: TextAlign.center,
+                  style: AppFonts.body(fontSize: 15),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Creating a new design can take a minute or more.\n'
+                'Please keep the app open.',
+                textAlign: TextAlign.center,
+                style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                '${_elapsed}s',
+                style: AppFonts.body(fontSize: 12, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One column of the comparison dialog: a label plus the front and
+/// back sprites of a design.
+class _SpriteChoiceColumn extends StatelessWidget {
+  final String label;
+  final String frontUrl;
+  final String backUrl;
+  final List<String> types;
+
+  const _SpriteChoiceColumn({
+    required this.label,
+    required this.frontUrl,
+    required this.backUrl,
+    required this.types,
+  });
+
+  Widget _tile(String url) {
+    return Container(
+      height: 110,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        gradient: TypeColors.backgroundGradient(types),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: SpriteImage(url: url),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label,
+            textAlign: TextAlign.center,
+            style: AppFonts.body(fontSize: 12, color: AppColors.textMuted)),
+        const SizedBox(height: 6),
+        _tile(frontUrl),
+        const SizedBox(height: 8),
+        _tile(backUrl),
+      ],
     );
   }
 }

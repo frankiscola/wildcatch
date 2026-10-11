@@ -1,8 +1,13 @@
 // supabase/functions/regenerate-sprite/index.ts
 //
-// Regenerates the front/back sprite of an ALREADY-CAPTURED Wildkin,
-// keeping the same original photo and species as reference — the
-// "reroll if you don't love the result" feature. Spends a capture
+// Generates a NEW front/back sprite candidate for an ALREADY-CAPTURED
+// Wildkin, keeping the same original photo and species as reference —
+// the "reroll if you don't love the result" feature.
+//
+// It does NOT overwrite the Wildkin's current sprites: it uploads the
+// candidate and returns its URLs, so the player can compare it with
+// the current design and choose. The client applies the choice (see
+// SupabaseService.applySprites). Spends a capture
 // token (or is free for an active premium subscriber) via the same
 // entitlements pool used for extra captures beyond the daily free
 // quota; see _shared/entitlements.ts.
@@ -10,6 +15,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { generateSprites } from "../_shared/sprite_pipeline.ts";
+import { ImageProviderError } from "../_shared/image_generation_client.ts";
 import { consumeRerollCredit, refundCredit } from "../_shared/entitlements.ts";
 
 interface RequestBody {
@@ -52,7 +58,7 @@ Deno.serve(async (req: Request) => {
     // the caller owns, but the explicit .eq keeps intent obvious.
     const { data: wildkin, error: fetchError } = await supabase
       .from("captures")
-      .select("id, user_id, original_photo_url, species_hint")
+      .select("id, user_id, original_photo_url, species_hint, assigned_type")
       .eq("id", wildkin_id)
       .eq("user_id", userId)
       .single();
@@ -84,6 +90,7 @@ Deno.serve(async (req: Request) => {
       const sprites = await generateSprites(
         { bytes: photoBytes, mimeType },
         wildkin.species_hint ?? null,
+        (wildkin.assigned_type as string[] | null) ?? [],
       );
 
       const spriteId = crypto.randomUUID();
@@ -96,21 +103,23 @@ Deno.serve(async (req: Request) => {
       const frontSpriteUrl = supabase.storage.from("captures").getPublicUrl(frontPath).data.publicUrl;
       const backSpriteUrl = supabase.storage.from("captures").getPublicUrl(backPath).data.publicUrl;
 
-      const { data: updated, error: updateError } = await supabase
-        .from("captures")
-        .update({ front_sprite_url: frontSpriteUrl, back_sprite_url: backSpriteUrl })
-        .eq("id", wildkin_id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Could not save the new sprite: ${updateError.message}`);
-      }
-
-      return jsonResponse(updated, 200);
+      // Deliberately NOT written to the captures row: the player
+      // decides first whether to keep the current design or use this one.
+      return jsonResponse(
+        { front_sprite_url: frontSpriteUrl, back_sprite_url: backSpriteUrl },
+        200,
+      );
     } catch (e) {
       console.error("Sprite regeneration failed, refunding credit:", e);
       await refundCredit(supabaseAdmin, userId, creditSource);
+
+      // The provider's safety system rejected the generated image
+      // (even after a retry): not a server fault, tell the client so
+      // it can suggest trying again / another photo.
+      if (e instanceof ImageProviderError && e.code === "moderation_blocked") {
+        return jsonResponse({ reason: "image_blocked" }, 422);
+      }
+
       return jsonResponse(
         { error: "Sprite generation failed. You were not charged." },
         502,

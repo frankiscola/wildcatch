@@ -28,10 +28,20 @@ Future<void> main() async {
   // entitlements or offerings, and logged in as the SAME id Supabase
   // uses — that's what lets revenuecat-webhook/index.ts write to the
   // right `profiles` row when a purchase comes in.
-  await PurchasesService.configure();
-  final initialUserId = auth.currentUser?.id;
-  if (initialUserId != null) {
-    await PurchasesService.logIn(initialUserId);
+  //
+  // Wrapped in try/catch on purpose: on a device without Google Play
+  // Billing (emulator without Play Store, no Google account...) the
+  // SDK can fail here, and that must never stop the app from starting.
+  // Purchases simply stay unavailable; the paywall shows a friendly
+  // message (see paywall_screen.dart).
+  try {
+    await PurchasesService.configure();
+    final initialUserId = auth.currentUser?.id;
+    if (initialUserId != null) {
+      await PurchasesService.logIn(initialUserId);
+    }
+  } catch (e) {
+    debugPrint('RevenueCat unavailable, continuing without purchases: $e');
   }
 
   // auth.uid() isn't necessarily permanent: linking an email to an
@@ -43,7 +53,9 @@ Future<void> main() async {
   auth.onAuthStateChange.listen((event) {
     final userId = event.session?.user.id;
     if (userId != null) {
-      PurchasesService.logIn(userId);
+      PurchasesService.logIn(userId).catchError((Object e) {
+        debugPrint('RevenueCat logIn failed: $e');
+      });
     }
   });
 
