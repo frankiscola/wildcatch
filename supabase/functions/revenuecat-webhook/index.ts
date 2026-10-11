@@ -6,6 +6,15 @@
 // real purchase — the Flutter client never writes these fields
 // itself (see entitlements.ts for why).
 //
+// !! DEPLOY WITH JWT VERIFICATION DISABLED !!
+// RevenueCat sends its OWN shared-secret value in the Authorization
+// header, not a Supabase JWT. With Supabase's default JWT check on,
+// the gateway rejects every webhook with a 401 before this code even
+// runs — it would look deployed and healthy while never receiving a
+// single event. Deploy with:
+//   supabase functions deploy revenuecat-webhook --no-verify-jwt
+// The shared-secret check below is what actually authenticates calls.
+//
 // Setup required on your side:
 //   1. RevenueCat dashboard -> Project settings -> Webhooks:
 //      URL = https://<project-ref>.supabase.co/functions/v1/revenuecat-webhook
@@ -19,6 +28,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ENTITLEMENT_ID = "premium";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // product_id (as configured in RevenueCat/App Store/Play Store) ->
 // how many capture tokens a NON_RENEWING_PURCHASE of it grants.
@@ -100,10 +112,21 @@ Deno.serve(async (req: Request) => {
 
   // The RevenueCat app_user_id is set to Supabase's auth.uid() from
   // the Flutter side (Purchases.logIn with the Supabase user id) —
-  // see purchases_service.dart. If that wiring is ever missing for a
-  // given user, this will just silently fail to find a profile row;
-  // logged below so it's visible instead of a mystery.
+  // see purchases_service.dart. If a purchase ever happens BEFORE
+  // that login, RevenueCat reports it under an anonymous id like
+  // "$RCAnonymousID:abc123", which maps to no profile at all.
+  // Retrying can't fix that, so acknowledge it (200) instead of
+  // making RevenueCat retry forever, but log it loudly so the
+  // purchase can be reconciled by hand.
   const userId = event.app_user_id;
+  if (!UUID_PATTERN.test(userId)) {
+    console.warn(
+      `Event ${event.id} (${event.type}) has a non-UUID app_user_id ` +
+        `"${userId}" — not attributable to a Supabase user. ` +
+        "Left logged in revenuecat_events for manual reconciliation.",
+    );
+    return new Response("Not attributable", { status: 200 });
+  }
 
   try {
     switch (event.type) {
@@ -152,13 +175,29 @@ Deno.serve(async (req: Request) => {
     }
   } catch (e) {
     console.error(`Failed to apply event ${event.id} (${event.type}):`, e);
-    // Still return 200: we've already durably logged the raw event
-    // above, so it's recoverable by re-deriving state from
-    // revenuecat_events later. Returning an error here would make
-    // RevenueCat retry with the SAME event.id, which our idempotency
-    // check would then just skip as "already processed" — making the
-    // failure permanent instead of retryable. Logging loudly is the
-    // right trade-off until this function has a human watching it.
+
+    // The event was marked as "seen" above BEFORE being applied, so
+    // that marker must be undone now: RevenueCat's retry reuses the
+    // same event.id, and if the marker stayed, the retry would hit
+    // the "Already processed" branch and the purchase would never be
+    // applied — the player would have paid for nothing, silently.
+    // Removing it and returning 500 makes RevenueCat retry with
+    // backoff, and the retry gets a clean second attempt.
+    const { error: cleanupError } = await supabaseAdmin
+      .from("revenuecat_events")
+      .delete()
+      .eq("event_id", event.id);
+    if (cleanupError) {
+      // Narrow window, but worth shouting about: if THIS fails too,
+      // the retry will be skipped as a duplicate and the purchase
+      // needs to be applied by hand from the logged event id.
+      console.error(
+        `CRITICAL: could not undo idempotency marker for ${event.id}; ` +
+          "this purchase may need manual reconciliation.",
+        cleanupError,
+      );
+    }
+    return new Response("Processing failed", { status: 500 });
   }
 
   return new Response("OK", { status: 200 });
@@ -171,23 +210,34 @@ function hasPremiumEntitlement(event: RevenueCatEvent): boolean {
 // deno-lint-ignore no-explicit-any
 async function grantPremium(supabase: any, userId: string, expiresAtMs: number | null) {
   await ensureProfileExists(supabase, userId);
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({
       is_premium: true,
       premium_expires_at: expiresAtMs ? new Date(expiresAtMs).toISOString() : null,
     })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("user_id");
   if (error) throw new Error(`grantPremium failed: ${error.message}`);
+  // An update that matches zero rows is NOT an error to Postgres, so
+  // without this check a purchase for a user that doesn't exist would
+  // look successfully applied while changing nothing.
+  if (!data || data.length === 0) {
+    throw new Error(`grantPremium matched no profile row for ${userId}`);
+  }
 }
 
 // deno-lint-ignore no-explicit-any
 async function revokePremium(supabase: any, userId: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({ is_premium: false })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("user_id");
   if (error) throw new Error(`revokePremium failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new Error(`revokePremium matched no profile row for ${userId}`);
+  }
 }
 
 // deno-lint-ignore no-explicit-any
