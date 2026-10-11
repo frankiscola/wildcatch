@@ -16,10 +16,14 @@ import { askAboutImages, generateImage, type ImageReference } from "./image_gene
 import { resizeToSpriteSize } from "./sprite_postprocess.ts";
 import {
   BACK_PROMPT,
+  BACK_PROMPT_SAFE,
   buildSpritePrompt,
   EVOLUTION_1_PROMPT,
+  EVOLUTION_1_PROMPT_SAFE,
   EVOLUTION_2_PROMPT,
+  EVOLUTION_2_PROMPT_SAFE,
   FRONT_PROMPT,
+  FRONT_PROMPT_SAFE,
 } from "./sprite_prompts.ts";
 
 const SPRITE_SIZE = 128; // see sprite_postprocess.ts for why
@@ -37,6 +41,7 @@ export async function generateSprites(
   const front = await generateImage(
     buildSpritePrompt(FRONT_PROMPT, types, speciesHint),
     [photo],
+    buildSpritePrompt(FRONT_PROMPT_SAFE, types, speciesHint),
   );
   return await completeWithBack(front, speciesHint, types);
 }
@@ -57,9 +62,11 @@ export async function generateEvolutionSprites(
   types: string[],
 ): Promise<SpriteResult> {
   const template = stage === 1 ? EVOLUTION_1_PROMPT : EVOLUTION_2_PROMPT;
+  const safeTemplate = stage === 1 ? EVOLUTION_1_PROMPT_SAFE : EVOLUTION_2_PROMPT_SAFE;
   const front = await generateImage(
     buildSpritePrompt(template, types, speciesHint),
     [previousFront],
+    buildSpritePrompt(safeTemplate, types, speciesHint),
   );
   return await completeWithBack(front, speciesHint, types);
 }
@@ -72,13 +79,14 @@ async function completeWithBack(
   types: string[],
 ): Promise<SpriteResult> {
   const backPrompt = buildSpritePrompt(BACK_PROMPT, types, speciesHint);
-  let back = await generateImage(backPrompt, [front]);
+  const backPromptSafe = buildSpritePrompt(BACK_PROMPT_SAFE, types, speciesHint);
+  let back = await generateImage(backPrompt, [front], backPromptSafe);
 
   const plausible = await backLooksLikeSameCreature(front, back);
   if (!plausible) {
     // Generation isn't deterministic: a second attempt with the
     // exact same prompt is often enough to correct course.
-    back = await generateImage(backPrompt, [front]);
+    back = await generateImage(backPrompt, [front], backPromptSafe);
   }
 
   // Resize ONLY at the end: the plausibility check above works on

@@ -38,9 +38,18 @@ export class ImageProviderError extends Error {
   }
 }
 
-// Output-stage moderation is not deterministic: the same request
-// can pass on a second attempt, so retry once before giving up.
-const MAX_MODERATION_ATTEMPTS = 2;
+// Output-stage moderation is not deterministic, but a blocked image
+// has already been generated (and is probably billed), so every
+// automatic retry costs money again. Default: NO automatic retry, the
+// player can simply try again. Set to 2 to retry once with the
+// fallbackPrompt (the neutral wording from sprite_prompts.ts).
+const MAX_MODERATION_ATTEMPTS = 1;
+
+// Sprites end up at 128x128 (see sprite_pipeline.ts), so the highest
+// quality is wasted money. Valid values depend on the model:
+// "low" | "medium" | "high" | "auto". If the API rejects this
+// parameter for your model, remove the form.append("quality") line.
+const IMAGE_QUALITY = "low";
 
 function extensionFor(mimeType: string): string {
   if (mimeType === "image/png") return "png";
@@ -73,9 +82,15 @@ function apiKey(): string {
 /// Throws on any problem — the caller is responsible for the
 /// fallback (see sprite_pipeline.ts): a generation hiccup should
 /// never fail a capture.
+///
+/// [fallbackPrompt] is used from the second attempt on, and only when
+/// the previous one was blocked by output moderation: re-sending the
+/// exact same prompt and image rarely changes the outcome, so the
+/// retry gets a more neutral wording instead.
 export async function generateImage(
   prompt: string,
   references: ImageReference[],
+  fallbackPrompt?: string,
 ): Promise<GeneratedImage> {
   if (references.length === 0) {
     throw new Error("generateImage requires at least one reference image.");
@@ -87,7 +102,9 @@ export async function generateImage(
     // FormData must be rebuilt for every attempt (the body is consumed).
     const form = new FormData();
     form.append("model", OPENAI_MODEL);
-    form.append("prompt", prompt);
+    const promptUsed = attempt > 1 && fallbackPrompt ? fallbackPrompt : prompt;
+    form.append("prompt", promptUsed);
+    form.append("quality", IMAGE_QUALITY);
     form.append("background", "transparent");
     form.append("output_format", "png");
 
@@ -123,10 +140,27 @@ export async function generateImage(
     );
 
     if (code !== "moderation_blocked") throw lastError;
-    console.warn(`Image blocked by moderation (attempt ${attempt}/${MAX_MODERATION_ATTEMPTS}).`);
+    console.warn(
+      `Image blocked by moderation (attempt ${attempt}/${MAX_MODERATION_ATTEMPTS}, ` +
+        `${attempt > 1 && fallbackPrompt ? "fallback" : "primary"} prompt). ` +
+        `references=${references.length}, ` +
+        `details=${extractModerationDetails(errText)}, prompt="${promptUsed}"`,
+    );
   }
 
   throw lastError!;
+}
+
+/// Compact "stage/categories" string from the provider's error body,
+/// for the logs only. Never throws.
+function extractModerationDetails(errText: string): string {
+  try {
+    const d = JSON.parse(errText)?.error?.moderation_details;
+    if (!d) return "n/a";
+    return `${d.moderation_stage ?? "?"}/${(d.categories ?? []).join(",")}`;
+  } catch {
+    return "n/a";
+  }
 }
 
 async function parseImageResponse(response: Response): Promise<GeneratedImage> {

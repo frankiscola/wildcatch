@@ -49,6 +49,40 @@ export const EVOLUTION_2_PROMPT =
   "different, beastly pose. " + FACING_LEFT + " {type_hint} type. " +
   "Inspired by a {species_hint}. " + STYLE;
 
+// ---------------------------------------------------------------
+// Fallback prompts, used ONLY for the retry after an output-stage
+// moderation block (see generateImage's fallbackPrompt). Same
+// subject and composition, but the style line no longer evokes a
+// specific game generation and explicitly asks for an original
+// design: the most likely reason for a block with category "other"
+// is the result looking too close to an existing franchise's creature.
+// ---------------------------------------------------------------
+
+const SAFE_STYLE =
+  "Original creature design, not resembling any existing character or " +
+  "franchise. Clean retro pixel art, 128x128 px, limited color palette, " +
+  "thick dark outlines, flat colors. Transparent background. No ground.";
+
+export const FRONT_PROMPT_SAFE =
+  "Pixel art sprite of an original animal-like creature of {type_hint} " +
+  "type inspired by a {species_hint}. " + FACING_LEFT + " " + SAFE_STYLE;
+
+export const BACK_PROMPT_SAFE =
+  "Same subject, seen from behind, facing away from the viewer, slightly " +
+  "turned toward the right. " + SAFE_STYLE;
+
+export const EVOLUTION_1_PROMPT_SAFE =
+  "Same subject, but a stronger, more evolved form of the same creature: " +
+  "bigger-looking and bulkier, with a more evolved design and a more " +
+  "aggressive pose. " + FACING_LEFT + " {type_hint} type. " +
+  "Inspired by a {species_hint}. " + SAFE_STYLE;
+
+export const EVOLUTION_2_PROMPT_SAFE =
+  "Same subject, but an even stronger, final evolved form of the same " +
+  "creature: bigger-looking and bulkier, with a more evolved design and " +
+  "a beastly pose. " + FACING_LEFT + " {type_hint} type. " +
+  "Inspired by a {species_hint}. " + SAFE_STYLE;
+
 /// Fills {type_hint} / {species_hint}. When the species is unknown
 /// (species_hint is null) the "inspired by a {species_hint}" clause is
 /// dropped instead of injecting a bogus placeholder.

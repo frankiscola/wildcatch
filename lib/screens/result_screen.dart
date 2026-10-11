@@ -1236,7 +1236,6 @@ class _Panel extends StatelessWidget {
   }
 }
 
-
 /// Loading screen shown while the server generates the new design.
 /// The server doesn't report progress, so the messages are tied to
 /// elapsed time: they are an estimate of what is happening (photo ->
@@ -1250,7 +1249,7 @@ class _RerollProgressDialog extends StatefulWidget {
 
 class _RerollProgressDialogState extends State<_RerollProgressDialog> {
   static const List<(int, String)> _stages = [
-    (0, 'Studying your photo...'),
+    (0, 'Studying your wildkin...'),
     (10, 'Sketching the front view...'),
     (35, 'Turning it around for the back view...'),
     (60, 'Checking that front and back match...'),
